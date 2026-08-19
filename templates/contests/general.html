@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Visão Geral dos Estudos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-diagram-3 me-2"></i>Visão Geral dos Estudos</h2>
+  <a href="{% url 'contests:create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Novo Estudo
+  </a>
+</div>
+
+<div class="row g-4">
+  {% for item in estudos_data %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <!-- Informações do estudo -->
+            <div class="col-md-3">
+              <h4 class="card-title">{{ item.estudo.name }}</h4>
+              <p class="card-text text-muted small">
+                <i class="bi bi-calendar-plus me-1"></i> Início: {{ item.data_inicio|date:"d/m/Y" }}<br>
+                <i class="bi bi-calendar-event me-1"></i> Prova: {{ item.data_prova|date:"d/m/Y"|default:"Não definida" }}
+              </p>
+              <span class="badge bg-{% if item.estudo.status == 'studying' %}primary{% elif item.estudo.status == 'review' %}warning{% elif item.estudo.status == 'finished' %}success{% else %}secondary{% endif %}">
+                {{ item.estudo.get_status_display }}
+              </span>
+              <p class="mt-2 mb-0"><small>Matérias: {{ item.total_materias }}</small></p>
+            </div>
+
+            <!-- Barra de progresso com boneco -->
+            <div class="col-md-6">
+              <div class="position-relative" style="height: 40px; background: #2d2d44; border-radius: 20px; overflow: visible;">
+                <div class="progress-bar" role="progressbar" style="width: {{ item.progresso }}%; height: 100%; background: linear-gradient(90deg, #4f46e5, #7c8cff); border-radius: 20px;"></div>
+                <!-- Boneco (posicionado conforme progresso) -->
+                <div class="position-absolute top-0 start-0" style="transform: translateX({{ item.posicao_boneco }}%); transition: transform 0.5s ease; height: 100%; display: flex; align-items: center; padding-left: 10px;">
+                  <i class="bi bi-person-walking" style="font-size: 2.2rem; color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5);"></i>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between mt-1">
+                <small class="text-muted">Início</small>
+                <small class="text-muted">{{ item.progresso }}% concluído</small>
+                <small class="text-muted">Prova</small>
+              </div>
+            </div>
+
+            <!-- Resumo rápido -->
+            <div class="col-md-3 text-end">
+              <p class="mb-1"><i class="bi bi-book me-1"></i> Tópicos: {{ item.total_topics }}</p>
+              <p class="mb-1"><i class="bi bi-check-circle me-1 text-success"></i> Concluídos: {{ item.concluidos }}</p>
+              {% if item.dias_totais %}
+                <p class="mb-0"><i class="bi bi-hourglass-split me-1"></i> {{ item.dias_passados }} / {{ item.dias_totais }} dias</p>
+              {% endif %}
+              <a href="{% url 'contests:detail' item.estudo.pk %}" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-eye"></i> Ver detalhes
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i> Nenhum estudo cadastrado. 
+        <a href="{% url 'contests:create' %}" class="alert-link">Crie seu primeiro estudo</a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

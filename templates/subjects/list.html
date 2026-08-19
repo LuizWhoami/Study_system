@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Matérias</h2>
+<a href="{% url 'subjects:create' %}" class="btn btn-primary mb-3">Nova Matéria</a>
+<ul class="list-group">
+  {% for subject in subjects %}
+    <li class="list-group-item">{{ subject.name }} ({{ subject.contest.name }})</li>
+  {% empty %}
+    <li class="list-group-item">Nenhuma matéria cadastrada.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

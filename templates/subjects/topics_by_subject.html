@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Assuntos de {{ subject.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-diagram-2 me-2"></i>Assuntos de {{ subject.name }}</h2>
+  <a href="{% url 'subjects:topic_create' %}?materia={{ subject.id }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Novo Assunto
+  </a>
+</div>
+
+<div class="row g-4">
+  {% for topic in topics %}
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">{{ topic.name }}</h5>
+          <p class="card-text">
+            {% if topic.status == 'mastered' %}
+              <span class="badge bg-success">Concluído</span>
+            {% elif topic.status == 'studying' %}
+              <span class="badge bg-primary">Estudando</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ topic.get_status_display }}</span>
+            {% endif %}
+          </p>
+          <div class="d-flex justify-content-between mt-3">
+            <a href="{% url 'subjects:concluir_topico' topic.id %}" class="btn btn-sm btn-outline-success">
+              <i class="bi bi-check-circle me-1"></i> Concluir
+            </a>
+            <a href="{% url 'subjects:topic_delete' topic.id %}" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash me-1"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i> Nenhum assunto cadastrado para esta matéria.
+        <a href="{% url 'subjects:topic_create' %}?materia={{ subject.id }}" class="alert-link">Adicionar assunto</a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<a href="{% url 'subjects:by_contest' subject.contest.id %}" class="btn btn-secondary mt-3">
+  <i class="bi bi-arrow-left me-1"></i> Voltar para Matérias
+</a>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ contest.name }}</h2>
+<p><strong>Orgão:</strong> {{ contest.organization }}</p>
+<p><strong>Cargo:</strong> {{ contest.position }}</p>
+<p><strong>Data da prova:</strong> {{ contest.exam_date|default:"Não definida" }}</p>
+<p><strong>Banca:</strong> {{ contest.board }}</p>
+<p><strong>Status:</strong> {{ contest.get_status_display }}</p>
+<p><strong>Observações:</strong> {{ contest.notes|linebreaks }}</p>
+<a href="{% url 'contests:update' contest.pk %}" class="btn btn-warning">Editar</a>
+<a href="{% url 'contests:list' %}" class="btn btn-secondary">Voltar</a>
+{% endblock %}

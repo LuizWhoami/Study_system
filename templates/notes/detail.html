@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ note.title }}</h2>
+<p><strong>Tópico:</strong> {{ note.topic.name }}</p>
+<div class="border p-3">
+  {{ note.content|linebreaks }}
+</div>
+<p><strong>Tags:</strong> 
+  {% for tag in note.tags.all %}
+    <span class="badge bg-secondary">{{ tag.name }}</span>
+  {% endfor %}
+</p>
+<a href="{% url 'notes:update' note.pk %}" class="btn btn-warning">Editar</a>
+<a href="{% url 'notes:list' %}" class="btn btn-secondary">Voltar</a>
+{% endblock %}

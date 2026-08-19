@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-primary text-dark">
+        <h4 class="mb-0"><i class="bi bi-clock me-2"></i>Cronômetro de Estudo</h4>
+      </div>
+      <div class="card-body">
+        <form id="timer-form">
+          <div class="mb-3">
+            <label for="topic" class="form-label fw-bold">Tópico</label>
+            <select class="form-select" id="topic" name="topic" required>
+              <option value="">Selecione...</option>
+              {% for topic in topics %}
+                <option value="{{ topic.id }}">{{ topic.get_full_path }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-4 text-center">
+            <label class="form-label fw-bold">Duração</label>
+            <div id="timer-display" class="display-4 fw-bold text-primary">00:00:00</div>
+          </div>
+          <div class="d-flex justify-content-center gap-2">
+            <button type="button" class="btn btn-success" id="start-btn">
+              <i class="bi bi-play-fill me-1"></i> Iniciar
+            </button>
+            <button type="button" class="btn btn-warning" id="pause-btn" disabled>
+              <i class="bi bi-pause-fill me-1"></i> Pausar
+            </button>
+            <button type="button" class="btn btn-danger" id="end-btn" disabled>
+              <i class="bi bi-stop-fill me-1"></i> Finalizar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let timerInterval = null;
+  let seconds = 0;
+  let sessionId = null;
+  let isRunning = false;
+
+  const display = document.getElementById('timer-display');
+  const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const endBtn = document.getElementById('end-btn');
+
+  function formatTime(s) {
+    const h = String(Math.floor(s / 3600)).padStart(2, '0');
+    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${h}:${m}:${sec}`;
+  }
+
+  function updateDisplay() {
+    display.textContent = formatTime(seconds);
+  }
+
+  function startTimer() {
+    const topicId = document.getElementById('topic').value;
+    if (!topicId) {
+      alert('Selecione um tópico.');
+      return;
+    }
+    fetch("{% url 'study:start_session' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: new URLSearchParams({ topic: topicId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      sessionId = data.session_id;
+      if (timerInterval) clearInterval(timerInterval);
+      seconds = 0;
+      updateDisplay();
+      timerInterval = setInterval(() => {
+        seconds++;
+        updateDisplay();
+      }, 1000);
+      isRunning = true;
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      endBtn.disabled = false;
+    });
+  }
+
+  function pauseTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      isRunning = false;
+      pauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Continuar';
+    } else {
+      timerInterval = setInterval(() => {
+        seconds++;
+        updateDisplay();
+      }, 1000);
+      isRunning = true;
+      pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+    }
+  }
+
+  function endTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    if (sessionId) {
+      fetch("{% url 'study:end_session' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: new URLSearchParams({ session_id: sessionId, duration_minutes: Math.floor(seconds / 60) })
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert('Sessão finalizada!');
+        resetTimer();
+      });
+    } else {
+      resetTimer();
+    }
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    seconds = 0;
+    updateDisplay();
+    isRunning = false;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    endBtn.disabled = true;
+    pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+    sessionId = null;
+  }
+
+  startBtn.addEventListener('click', startTimer);
+  pauseBtn.addEventListener('click', pauseTimer);
+  endBtn.addEventListener('click', endTimer);
+</script>
+{% endblock %}

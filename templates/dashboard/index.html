@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Cards -->
+  <div class="col-md-3 col-sm-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title">Hoje</h5>
+          <i class="bi bi-clock-history fs-3 text-primary"></i>
+        </div>
+        <p class="display-6 fw-bold">{{ hours_today }}h</p>
+        <small class="text-muted">Meta: {{ daily_goal_hours }}h</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title">Semana</h5>
+          <i class="bi bi-calendar-week fs-3 text-success"></i>
+        </div>
+        <p class="display-6 fw-bold">{{ hours_week }}h</p>
+        <small class="text-muted">Últimos 7 dias</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title">Mês</h5>
+          <i class="bi bi-calendar-month fs-3 text-warning"></i>
+        </div>
+        <p class="display-6 fw-bold">{{ hours_month }}h</p>
+        <small class="text-muted">Últimos 30 dias</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title">Questões</h5>
+          <i class="bi bi-check2-circle fs-3 text-info"></i>
+        </div>
+        <p class="display-6 fw-bold">{{ questions_today }}</p>
+        <small class="text-muted">Acertos: {{ accuracy }}%</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Segunda linha -->
+<div class="row g-4 mt-2">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>Progresso Geral</h5>
+        <div class="progress mb-3">
+          <div class="progress-bar" role="progressbar" style="width: {{ progress_general }}%;" aria-valuenow="{{ progress_general }}" aria-valuemin="0" aria-valuemax="100">{{ progress_general }}%</div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span><i class="bi bi-fire text-danger me-1"></i> Streak: {{ streak }} dias</span>
+          <span><i class="bi bi-clock text-warning me-1"></i> Revisões: {{ reviews_pending }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Últimas Sessões</h5>
+        <ul class="list-group list-group-flush">
+          {% for session in last_sessions %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-file-text me-2"></i>{{ session.topic.name|default:"Sem tópico" }}</span>
+              <span class="badge bg-primary rounded-pill">{{ session.duration_minutes }} min</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">Nenhuma sessão registrada.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Botão para Visão Geral -->
+<div class="row mt-4">
+  <div class="col-12 text-center">
+    <a href="{% url 'contests:general' %}" class="btn btn-primary btn-lg">
+      <i class="bi bi-globe2 me-2"></i> Ver Visão Geral de Todos os Estudos
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Estudar{% endblock %}
+
+{% block extra_css %}
+<style>
+  .study-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+  }
+  .timer-display {
+    font-size: 5rem;
+    font-weight: 700;
+    color: #7c8cff;
+    letter-spacing: 0.05em;
+    font-family: 'Inter', monospace;
+    background: rgba(255,255,255,0.05);
+    padding: 20px 40px;
+    border-radius: 20px;
+    border: 1px solid rgba(124, 140, 255, 0.2);
+  }
+  .study-buttons .btn {
+    min-width: 120px;
+    margin: 0 8px;
+    border-radius: 50px;
+    padding: 14px 35px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s;
+  }
+  .study-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  .study-info {
+    margin-top: 30px;
+    font-size: 1.1rem;
+    color: #c0c8e0;
+  }
+  .study-info .badge {
+    font-size: 1rem;
+    padding: 8px 16px;
+  }
+  .current-study {
+    background: rgba(124, 140, 255, 0.1);
+    border: 1px solid rgba(124, 140, 255, 0.2);
+    padding: 12px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  .current-study strong {
+    color: #7c8cff;
+  }
+  .custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  .custom-modal-overlay.active {
+    display: flex;
+  }
+  .custom-modal {
+    background: #1a1a2e;
+    border: 1px solid #2d2d44;
+    border-radius: 16px;
+    color: #e8e8f0;
+    max-width: 500px;
+    width: 95%;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    animation: modalFade 0.3s ease;
+  }
+  @keyframes modalFade {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .custom-modal h5 {
+    color: #7c8cff;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .custom-modal .form-label {
+    font-weight: 500;
+  }
+  .custom-modal .form-select {
+    background-color: #2d2d44;
+    border-color: #3d3d5c;
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 14px;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  .custom-modal .form-select:disabled {
+    opacity: 0.5;
+  }
+  .custom-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .custom-modal .btn-secondary {
+    background: #2d2d44;
+    border: none;
+    color: #e8e8f0;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 500;
+  }
+  .custom-modal .btn-secondary:hover {
+    background: #3d3d5c;
+  }
+  .custom-modal .btn-primary {
+    background: #4f46e5;
+    border: none;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 500;
+  }
+  .custom-modal .btn-primary:hover {
+    background: #4338ca;
+  }
+  .custom-modal .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="study-container">
+  <div class="current-study text-center" id="current-study-info">
+    <span class="text-muted">Nenhum estudo em andamento</span>
+  </div>
+  <div class="timer-display" id="timer-display">00:00:00</div>
+  <div class="study-buttons mt-4">
+    <button type="button" class="btn btn-success" id="start-btn">
+      <i class="bi bi-play-fill me-1"></i> Iniciar
+    </button>
+    <button type="button" class="btn btn-warning" id="pause-btn" disabled>
+      <i class="bi bi-pause-fill me-1"></i> Pausar
+    </button>
+    <button type="button" class="btn btn-danger" id="end-btn" disabled>
+      <i class="bi bi-stop-fill me-1"></i> Finalizar
+    </button>
+  </div>
+  <div class="study-info mt-4">
+    <span id="session-timer" class="badge bg-secondary">Sessão: 0 min</span>
+    <span id="topic-name" class="badge bg-primary ms-2">Tópico: --</span>
+  </div>
+</div>
+
+<div class="custom-modal-overlay" id="customModal">
+  <div class="custom-modal">
+    <h5><i class="bi bi-book me-2"></i>O que você vai estudar?</h5>
+    <form id="study-select-form">
+      <div class="mb-3">
+        <label for="estudo-select" class="form-label">Estudo</label>
+        <select class="form-select" id="estudo-select" required>
+          <option value="">Selecione...</option>
+          {% for estudo in estudos %}
+            <option value="{{ estudo.id }}">{{ estudo.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="materia-select" class="form-label">Matéria</label>
+        <select class="form-select" id="materia-select" disabled required>
+          <option value="">Primeiro selecione um estudo</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="topico-select" class="form-label">Tópico</label>
+        <select class="form-select" id="topico-select" disabled required>
+          <option value="">Primeiro selecione uma matéria</option>
+        </select>
+      </div>
+    </form>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancel-modal-btn">Cancelar</button>
+      <button type="button" class="btn-primary" id="confirm-study-btn" disabled>
+        <i class="bi bi-play-circle me-1"></i> Começar
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    let timerInterval = null;
+    let seconds = 0;
+    let sessionId = null;
+    let selectedTopicName = '';
+
+    const display = document.getElementById('timer-display');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const endBtn = document.getElementById('end-btn');
+    const sessionTimer = document.getElementById('session-timer');
+    const topicNameEl = document.getElementById('topic-name');
+    const currentInfo = document.getElementById('current-study-info');
+
+    const modal = document.getElementById('customModal');
+    const estudoSelect = document.getElementById('estudo-select');
+    const materiaSelect = document.getElementById('materia-select');
+    const topicoSelect = document.getElementById('topico-select');
+    const confirmBtn = document.getElementById('confirm-study-btn');
+    const cancelBtn = document.getElementById('cancel-modal-btn');
+
+    function openModal() {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      estudoSelect.value = '';
+      materiaSelect.disabled = true;
+      materiaSelect.innerHTML = '<option value="">Primeiro selecione um estudo</option>';
+      topicoSelect.disabled = true;
+      topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+      confirmBtn.disabled = true;
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    startBtn.addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeModal();
+    });
+
+    estudoSelect.addEventListener('change', function() {
+      const estudoId = this.value;
+      if (!estudoId) {
+        materiaSelect.disabled = true;
+        materiaSelect.innerHTML = '<option value="">Primeiro selecione um estudo</option>';
+        topicoSelect.disabled = true;
+        topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+        confirmBtn.disabled = true;
+        return;
+      }
+      fetch(`/estudo/api/materias-por-estudo/${estudoId}/`)
+        .then(r => r.json())
+        .then(data => {
+          materiaSelect.disabled = false;
+          materiaSelect.innerHTML = '<option value="">Selecione...</option>';
+          data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name;
+            materiaSelect.appendChild(opt);
+          });
+          topicoSelect.disabled = true;
+          topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+          confirmBtn.disabled = true;
+        })
+        .catch(err => console.error('Erro ao carregar matérias:', err));
+    });
+
+    materiaSelect.addEventListener('change', function() {
+      const materiaId = this.value;
+      if (!materiaId) {
+        topicoSelect.disabled = true;
+        topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+        confirmBtn.disabled = true;
+        return;
+      }
+      fetch(`/estudo/api/topicos-por-materia/${materiaId}/`)
+        .then(r => r.json())
+        .then(data => {
+          topicoSelect.disabled = false;
+          topicoSelect.innerHTML = '<option value="">Selecione...</option>';
+          data.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            topicoSelect.appendChild(opt);
+          });
+          confirmBtn.disabled = true;
+        })
+        .catch(err => console.error('Erro ao carregar tópicos:', err));
+    });
+
+    topicoSelect.addEventListener('change', function() {
+      confirmBtn.disabled = !this.value;
+      if (this.value) {
+        selectedTopicName = this.options[this.selectedIndex].text;
+      }
+    });
+
+    confirmBtn.addEventListener('click', function() {
+      const topicoId = topicoSelect.value;
+      if (!topicoId) return;
+      closeModal();
+
+      fetch("{% url 'study:start_session' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: new URLSearchParams({ topic: topicoId })
+      })
+      .then(r => r.json())
+      .then(data => {
+        sessionId = data.session_id;
+        currentInfo.innerHTML = `<strong>Estudando:</strong> ${selectedTopicName}`;
+        topicNameEl.textContent = `Tópico: ${selectedTopicName}`;
+        if (timerInterval) clearInterval(timerInterval);
+        seconds = 0;
+        updateDisplay();
+        timerInterval = setInterval(() => {
+          seconds++;
+          updateDisplay();
+        }, 1000);
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        endBtn.disabled = false;
+      })
+      .catch(err => {
+        console.error('Erro ao iniciar sessão:', err);
+        alert('Erro ao iniciar sessão. Tente novamente.');
+        startBtn.disabled = false;
+      });
+    });
+
+    function formatTime(s) {
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      return `${h}:${m}:${sec}`;
+    }
+
+    function updateDisplay() {
+      display.textContent = formatTime(seconds);
+      sessionTimer.textContent = `Sessão: ${Math.floor(seconds / 60)} min`;
+    }
+
+    pauseBtn.addEventListener('click', function() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        pauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Continuar';
+      } else {
+        timerInterval = setInterval(() => {
+          seconds++;
+          updateDisplay();
+        }, 1000);
+        pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+      }
+    });
+
+    // ====== FINALIZAR (CORRIGIDO) ======
+    endBtn.addEventListener('click', function() {
+      if (timerInterval) clearInterval(timerInterval);
+
+      if (!sessionId) {
+        resetTimer();
+        return;
+      }
+
+      const durationMinutes = Math.floor(seconds / 60);
+      // Se menos de 1 minuto, avisar
+      if (durationMinutes < 1) {
+        if (!confirm('Você estudou menos de 1 minuto. Deseja registrar mesmo assim?')) {
+          // Reativa o cronômetro se cancelar
+          if (!timerInterval) {
+            timerInterval = setInterval(() => {
+              seconds++;
+              updateDisplay();
+            }, 1000);
+          }
+          return;
+        }
+      }
+
+      fetch("{% url 'study:end_session' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          session_id: sessionId,
+          duration_minutes: durationMinutes
+        })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erro na resposta do servidor');
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          alert(`✅ Sessão finalizada! ${data.duration} minutos registrados.`);
+          resetTimer();
+          currentInfo.innerHTML = `<span class="text-muted">Nenhum estudo em andamento</span>`;
+          topicNameEl.textContent = 'Tópico: --';
+          // Atualiza dashboard se possível (recarregar a página? Opcional)
+        } else {
+          throw new Error(data.error || 'Erro desconhecido');
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao finalizar sessão:', err);
+        alert('❌ Erro ao finalizar sessão. Tente novamente.');
+        // Reativa o cronômetro se houve erro
+        if (!timerInterval) {
+          timerInterval = setInterval(() => {
+            seconds++;
+            updateDisplay();
+          }, 1000);
+        }
+      });
+    });
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      seconds = 0;
+      updateDisplay();
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      endBtn.disabled = true;
+      pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+      sessionId = null;
+      selectedTopicName = '';
+    }
+  });
+</script>
+{% endblock %}
