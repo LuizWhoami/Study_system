@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'apps.contests',
     'apps.subjects',
     'apps.notes',
+    'apps.flashcards',
     'apps.study',
     'apps.dashboard',
 ]
@@ -78,3 +79,4 @@ TIME_ZONE = 'America/Sao_Paulo'
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+GROQ_API_KEY = config('GROQ_API_KEY', default='')

@@ -49,3 +49,78 @@ class NoteDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'note'
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
+import json
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from .models import Note
+from apps.core.services import GroqService
+from apps.flashcards.models import Flashcard
+
+@login_required
+def gerar_flashcards_nota(request, note_id):
+    """Gera flashcards a partir do conteúdo de uma nota."""
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    service = GroqService()
+    flashcards = service.gerar_flashcards(note.content)
+    return JsonResponse({'flashcards': flashcards, 'note_id': note.id})
+
+@login_required
+@csrf_exempt
+def salvar_flashcards_nota(request, note_id):
+    """Salva os flashcards gerados no banco."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    try:
+        data = json.loads(request.body)
+        flashcards = data.get('flashcards', [])
+        for f in flashcards:
+            Flashcard.objects.create(
+                user=request.user,
+                topic=note.topic,
+                pergunta=f.get('pergunta', ''),
+                resposta=f.get('resposta', ''),
+                nivel=3  # médio por padrão
+            )
+        return JsonResponse({'success': True, 'count': len(flashcards)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+import json
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from .models import Note
+from apps.core.services import GroqService
+from apps.flashcards.models import Flashcard
+
+@login_required
+def gerar_flashcards_nota(request, note_id):
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    service = GroqService()
+    flashcards = service.gerar_flashcards(note.content)
+    return JsonResponse({'flashcards': flashcards, 'note_id': note.id})
+
+@login_required
+@csrf_exempt
+def salvar_flashcards_nota(request, note_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    try:
+        data = json.loads(request.body)
+        flashcards = data.get('flashcards', [])
+        for f in flashcards:
+            Flashcard.objects.create(
+                user=request.user,
+                topic=note.topic,
+                pergunta=f.get('pergunta', ''),
+                resposta=f.get('resposta', ''),
+                nivel=3
+            )
+        return JsonResponse({'success': True, 'count': len(flashcards)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

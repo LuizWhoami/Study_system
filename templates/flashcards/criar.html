@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Novo Flashcard{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h4><i class="bi bi-plus-circle me-2"></i>Novo Flashcard</h4>
+      </div>
+      <div class="card-body">
+        {% if erro %}
+          <div class="alert alert-danger">{{ erro }}</div>
+        {% endif %}
+        {% if sucesso %}
+          <div class="alert alert-success">{{ sucesso }}</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="topic" class="form-label">Tópico (Estudo → Matéria → Assunto)</label>
+            <select class="form-select" id="topic" name="topic" required>
+              <option value="">Selecione...</option>
+              {% for topic in topics %}
+                <option value="{{ topic.id }}">{{ topic.subject.contest.name }} → {{ topic.subject.name }} → {{ topic.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="pergunta" class="form-label">Pergunta</label>
+            <textarea class="form-control" id="pergunta" name="pergunta" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="resposta" class="form-label">Resposta</label>
+            <textarea class="form-control" id="resposta" name="resposta" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="nivel" class="form-label">Nível de dificuldade</label>
+            <select class="form-select" id="nivel" name="nivel">
+              <option value="1">1 - Muito fácil</option>
+              <option value="2">2 - Fácil</option>
+              <option value="3" selected>3 - Médio</option>
+              <option value="4">4 - Difícil</option>
+              <option value="5">5 - Muito difícil</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-save me-1"></i> Salvar
+          </button>
+        </form>
+      </div>
+    </div>
+    <a href="{% url 'flashcards:listar' %}" class="btn btn-secondary mt-3">
+      <i class="bi bi-arrow-left me-1"></i> Voltar para lista
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,15 +1,108 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>{{ note.title }}</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>{{ note.title }}</h2>
+  <div>
+    <a href="{% url 'notes:update' note.pk %}" class="btn btn-warning">
+      <i class="bi bi-pencil me-1"></i> Editar
+    </a>
+    <a href="{% url 'notes:list' %}" class="btn btn-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+  </div>
+</div>
+
 <p><strong>Tópico:</strong> {{ note.topic.name }}</p>
-<div class="border p-3">
+<div class="border p-3 bg-dark bg-opacity-10 rounded">
   {{ note.content|linebreaks }}
 </div>
-<p><strong>Tags:</strong> 
+
+<p class="mt-3">
+  <strong>Tags:</strong>
   {% for tag in note.tags.all %}
     <span class="badge bg-secondary">{{ tag.name }}</span>
   {% endfor %}
 </p>
-<a href="{% url 'notes:update' note.pk %}" class="btn btn-warning">Editar</a>
-<a href="{% url 'notes:list' %}" class="btn btn-secondary">Voltar</a>
+
+<div class="mt-4">
+  <button class="btn btn-primary" onclick="gerarFlashcards({{ note.id }})">
+    <i class="bi bi-magic me-1"></i> Gerar Flashcards com IA
+  </button>
+</div>
+
+<div id="flashcards-result" class="mt-4" style="display: none;">
+  <h5><i class="bi bi-card-checklist me-2"></i>Flashcards gerados</h5>
+  <div id="flashcards-list"></div>
+  <button class="btn btn-success mt-3" onclick="salvarFlashcards()">
+    <i class="bi bi-save me-1"></i> Salvar todos
+  </button>
+  <button class="btn btn-secondary mt-3 ms-2" onclick="document.getElementById('flashcards-result').style.display='none'">
+    <i class="bi bi-x-circle me-1"></i> Fechar
+  </button>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function gerarFlashcards(noteId) {
+    const resultDiv = document.getElementById('flashcards-result');
+    const listDiv = document.getElementById('flashcards-list');
+    listDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Gerando...</span></div>';
+    resultDiv.style.display = 'block';
+
+    fetch(`/notas/nota/${noteId}/gerar-flashcards/`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.flashcards || data.flashcards.length === 0) {
+          listDiv.innerHTML = '<div class="alert alert-warning">Não foi possível gerar flashcards. Tente novamente.</div>';
+          return;
+        }
+        let html = '';
+        data.flashcards.forEach((f, i) => {
+          html += `
+            <div class="card mb-2">
+              <div class="card-body">
+                <p><strong>Pergunta ${i+1}:</strong> ${f.pergunta}</p>
+                <p><strong>Resposta:</strong> ${f.resposta}</p>
+              </div>
+            </div>
+          `;
+        });
+        listDiv.innerHTML = html;
+        // Armazena dados para salvar
+        window.flashcardsData = data.flashcards;
+        window.noteId = noteId;
+      })
+      .catch(err => {
+        listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${err.message}</div>`;
+      });
+  }
+
+  function salvarFlashcards() {
+    if (!window.flashcardsData || window.flashcardsData.length === 0) {
+      alert('Nenhum flashcard para salvar.');
+      return;
+    }
+    fetch(`/notas/nota/${window.noteId}/salvar-flashcards/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ flashcards: window.flashcardsData })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert(`${data.count} flashcards salvos com sucesso!`);
+        document.getElementById('flashcards-result').style.display = 'none';
+        window.flashcardsData = null;
+      } else {
+        alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+      }
+    })
+    .catch(err => alert('Erro ao salvar: ' + err));
+  }
+</script>
 {% endblock %}

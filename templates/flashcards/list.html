@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Flashcards - Hoje{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-card-checklist me-2"></i>Flashcards de Hoje</h2>
+  <a href="{% url 'flashcards:criar' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Novo Flashcard
+  </a>
+</div>
+
+{% if total_pendentes == 0 %}
+  <div class="alert alert-success">
+    <i class="bi bi-check-circle me-2"></i> Parabéns! Nenhum flashcard pendente para hoje.
+  </div>
+{% else %}
+  <p class="text-muted">Você tem <strong>{{ total_pendentes }}</strong> flashcards para revisar hoje.</p>
+  
+  <div class="row g-4">
+    {% for flashcard in flashcards %}
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ flashcard.pergunta|truncatewords:10 }}</h5>
+            <p class="card-text text-muted small">
+              <i class="bi bi-tag me-1"></i> {{ flashcard.topic.subject.name }} → {{ flashcard.topic.name }}
+            </p>
+            <p class="card-text">
+              <span class="badge bg-secondary">Revisões: {{ flashcard.vezes_revisado }}</span>
+              <span class="badge bg-info">Intervalo: {{ flashcard.intervalo }} dias</span>
+            </p>
+            <a href="{% url 'flashcards:revisar' flashcard.pk %}" class="btn btn-success w-100">
+              <i class="bi bi-arrow-right-circle me-1"></i> Revisar agora
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<a href="{% url 'flashcards:estatisticas' %}" class="btn btn-secondary mt-3">
+  <i class="bi bi-bar-chart me-1"></i> Ver estatísticas
+</a>
+{% endblock %}
