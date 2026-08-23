@@ -14,23 +14,29 @@
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
-          <h5 class="card-title">{{ topic.name }}</h5>
-          <p class="card-text">
-            {% if topic.status == 'mastered' %}
-              <span class="badge bg-success">Concluído</span>
-            {% elif topic.status == 'studying' %}
-              <span class="badge bg-primary">Estudando</span>
-            {% else %}
-              <span class="badge bg-secondary">{{ topic.get_status_display }}</span>
-            {% endif %}
-          </p>
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title">{{ topic.name }}</h5>
+            <span class="badge bg-{% if topic.status == 'mastered' %}success{% elif topic.status == 'studying' %}primary{% else %}secondary{% endif %}">
+              {{ topic.get_status_display }}
+            </span>
+          </div>
           <div class="d-flex justify-content-between mt-3">
-            <a href="{% url 'subjects:concluir_topico' topic.id %}" class="btn btn-sm btn-outline-success">
-              <i class="bi bi-check-circle me-1"></i> Concluir
-            </a>
-            <a href="{% url 'subjects:topic_delete' topic.id %}" class="btn btn-sm btn-outline-danger">
-              <i class="bi bi-trash me-1"></i>
-            </a>
+            <div class="btn-group btn-group-sm w-100" role="group">
+              <form method="post" action="{% url 'subjects:alterar_status_topico' topic.id %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="studying">
+                <button type="submit" class="btn btn-outline-primary {% if topic.status == 'studying' %}active{% endif %} w-50">
+                  <i class="bi bi-play-circle"></i> Estudando
+                </button>
+              </form>
+              <form method="post" action="{% url 'subjects:alterar_status_topico' topic.id %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="mastered">
+                <button type="submit" class="btn btn-outline-success {% if topic.status == 'mastered' %}active{% endif %} w-50">
+                  <i class="bi bi-check-circle"></i> Concluído
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>

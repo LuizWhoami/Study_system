@@ -14,29 +14,39 @@
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
-          <h5 class="card-title">{{ subject.name }}</h5>
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title">{{ subject.name }}</h5>
+            <span class="badge bg-{% if subject.status == 'mastered' %}success{% elif subject.status == 'studying' %}primary{% else %}secondary{% endif %}">
+              {{ subject.get_status_display }}
+            </span>
+          </div>
           <p class="card-text">
-            {% if subject.status == 'mastered' %}
-              <span class="badge bg-success">Concluída</span>
-            {% elif subject.status == 'studying' %}
-              <span class="badge bg-primary">Estudando</span>
-            {% elif subject.status == 'not_started' %}
-              <span class="badge bg-secondary">Não iniciada</span>
-            {% else %}
-              <span class="badge bg-warning text-dark">{{ subject.get_status_display }}</span>
-            {% endif %}
+            <small class="text-muted">
+              <i class="bi bi-list-ul me-1"></i> {{ subject.topics.count }} assuntos
+            </small>
           </p>
           <div class="d-flex justify-content-between mt-3">
             <a href="{% url 'subjects:topics_by_subject' subject.id %}" class="btn btn-sm btn-outline-primary">
               <i class="bi bi-list-ul me-1"></i> Assuntos
             </a>
-            {% if subject.status != 'mastered' %}
-              <a href="{% url 'subjects:concluir_materia' subject.id %}" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-check-circle me-1"></i> Concluir
-              </a>
-            {% else %}
-              <span class="badge bg-success p-2">Concluída</span>
-            {% endif %}
+            <div class="btn-group btn-group-sm" role="group">
+              <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="studying">
+                <button type="submit" class="btn btn-outline-warning {% if subject.status == 'studying' %}active{% endif %}" 
+                        title="Marcar como Em andamento">
+                  <i class="bi bi-play-circle"></i>
+                </button>
+              </form>
+              <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="mastered">
+                <button type="submit" class="btn btn-outline-success {% if subject.status == 'mastered' %}active{% endif %}"
+                        title="Marcar como Concluído">
+                  <i class="bi bi-check-circle"></i>
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>

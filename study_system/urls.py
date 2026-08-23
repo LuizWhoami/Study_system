@@ -11,5 +11,8 @@ urlpatterns = [
     path('materias/', include('apps.subjects.urls')),
     path('notas/', include('apps.notes.urls')),
     path('estudo/', include('apps.study.urls')),
+    path('config/', include('apps.study_config.urls')),
+    path('calendar/', include('apps.calendar.urls')),
+    path('questions/', include('apps.questions.urls')),
     path('flashcards/', include('apps.flashcards.urls')),  # <-- adicione esta linha
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

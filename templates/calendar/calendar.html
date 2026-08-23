@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Calendário Semanal{% endblock %}
+
+{% block extra_css %}
+<style>
+  .calendar-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .calendar-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #f1f5f9;
+  }
+  .calendar-header .week-range {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.9rem;
+  }
+  .calendar-nav a {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 0.4rem 1rem;
+    color: #f1f5f9;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    margin: 0 0.2rem;
+    display: inline-block;
+    font-size: 0.9rem;
+  }
+  .calendar-nav a:hover {
+    background: rgba(167, 139, 250, 0.2);
+    color: #fff;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+  }
+  .calendar-day {
+    aspect-ratio: 1 / 1.1;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.5rem;
+    text-align: center;
+  }
+  .calendar-day:hover {
+    background: rgba(167, 139, 250, 0.12);
+    transform: scale(1.02);
+    border-color: rgba(167, 139, 250, 0.3);
+  }
+  .calendar-day .weekday-name {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .calendar-day .day-number {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    line-height: 1.2;
+  }
+  .calendar-day.today .day-number {
+    color: #a78bfa;
+  }
+  .calendar-day .activity-icon {
+    font-size: 1.8rem;
+    margin-top: 0.2rem;
+  }
+  .calendar-day .activity-label {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 0.2rem;
+    font-weight: 500;
+  }
+  .calendar-day.past {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .calendar-day.past:hover {
+    transform: none;
+    background: rgba(255,255,255,0.03);
+  }
+  .calendar-day.empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+  }
+  .calendar-day.empty:hover {
+    transform: none;
+    background: transparent;
+    border: none;
+  }
+  /* Cores das atividades */
+  .calendar-day.has-study { border-color: #4f46e5; background: rgba(79, 70, 229, 0.15); }
+  .calendar-day.has-review { border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
+  .calendar-day.has-questions { border-color: #06b6d4; background: rgba(6, 182, 212, 0.15); }
+  .calendar-day.has-summary { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.15); }
+  .calendar-day.has-rest { border-color: #6b7280; background: rgba(107, 114, 128, 0.15); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.8rem;
+  }
+  .legend-item .color-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .legend-item .color-box.study { background: rgba(79, 70, 229, 0.4); border-color: #4f46e5; }
+  .legend-item .color-box.review { background: rgba(245, 158, 11, 0.4); border-color: #f59e0b; }
+  .legend-item .color-box.questions { background: rgba(6, 182, 212, 0.4); border-color: #06b6d4; }
+  .legend-item .color-box.summary { background: rgba(139, 92, 246, 0.4); border-color: #8b5cf6; }
+  .legend-item .color-box.rest { background: rgba(107, 114, 128, 0.4); border-color: #6b7280; }
+
+  /* Modal */
+  .custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  .custom-modal-overlay.active {
+    display: flex;
+  }
+  .custom-modal {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 2rem;
+    padding: 2rem;
+    max-width: 400px;
+    width: 95%;
+    color: #f1f5f9;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+    animation: modalFade 0.3s ease;
+  }
+  @keyframes modalFade {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .custom-modal h4 {
+    margin-bottom: 0.5rem;
+    color: #a78bfa;
+    font-weight: 600;
+  }
+  .custom-modal .modal-date {
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 1.5rem;
+  }
+  .custom-modal .activity-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .custom-modal .activity-btn {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid transparent;
+    border-radius: 1rem;
+    padding: 0.6rem 0.3rem;
+    color: #c0c8e0;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+  }
+  .custom-modal .activity-btn:hover {
+    background: rgba(167, 139, 250, 0.1);
+  }
+  .custom-modal .activity-btn.selected {
+    border-color: #a78bfa;
+    background: rgba(167, 139, 250, 0.15);
+    color: #fff;
+  }
+  .custom-modal .activity-btn .icon {
+    display: block;
+    font-size: 1.5rem;
+  }
+  .custom-modal textarea {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem;
+    padding: 0.75rem;
+    color: #f1f5f9;
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+  }
+  .custom-modal textarea:focus {
+    outline: none;
+    border-color: #a78bfa;
+  }
+  .custom-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .custom-modal .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 0.4rem 1.5rem;
+    color: #c0c8e0;
+    transition: all 0.25s ease;
+  }
+  .custom-modal .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  .custom-modal .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.4rem 1.5rem;
+    color: #fff;
+    font-weight: 600;
+    transition: all 0.25s ease;
+  }
+  .custom-modal .btn-primary:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px -8px rgba(124, 58, 237, 0.5);
+  }
+  .custom-modal .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 1.5rem;
+    padding: 0.4rem 1.5rem;
+    color: #fca5a5;
+    transition: all 0.25s ease;
+  }
+  .custom-modal .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+  @media (max-width: 600px) {
+    .calendar-day .day-number { font-size: 1.2rem; }
+    .calendar-day .activity-icon { font-size: 1.2rem; }
+    .calendar-day .activity-label { font-size: 0.55rem; }
+    .calendar-header { flex-wrap: wrap; gap: 0.5rem; }
+    .calendar-nav a { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-wrapper">
+  <div class="calendar-header">
+    <div>
+      <h2>📅 Semana</h2>
+      <span class="week-range">{{ week_start|date:"d/m" }} – {{ week_end|date:"d/m/Y" }}</span>
+    </div>
+    <div class="calendar-nav">
+      <a href="?date={{ prev_week }}">‹</a>
+      <a href="?date={{ today|date:'Y-m-d' }}">Hoje</a>
+      <a href="?date={{ next_week }}">›</a>
+    </div>
+  </div>
+
+  <div class="calendar-grid">
+    {% for day in week_days %}
+      <div class="calendar-day 
+        {% if day.activity == 'study' %}has-study
+        {% elif day.activity == 'review' %}has-review
+        {% elif day.activity == 'questions' %}has-questions
+        {% elif day.activity == 'summary' %}has-summary
+        {% elif day.activity == 'rest' %}has-rest{% endif %}
+        {% if day.is_today %}today{% endif %}
+        {% if day.is_past %}past{% endif %}"
+        data-date="{{ day.date|date:'Y-m-d' }}"
+        onclick="openModal(this)"
+      >
+        <span class="weekday-name">{{ day.weekday_name }}</span>
+        <span class="day-number">{{ day.day }}</span>
+        {% if day.activity %}
+          <span class="activity-icon">
+            {% if day.activity == 'study' %}📚
+            {% elif day.activity == 'review' %}🔄
+            {% elif day.activity == 'questions' %}❓
+            {% elif day.activity == 'summary' %}📝
+            {% elif day.activity == 'rest' %}😴{% endif %}
+          </span>
+          <span class="activity-label">
+            {{ day.get_activity_display }}
+          </span>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="color-box study"></span> Estudo</span>
+    <span class="legend-item"><span class="color-box review"></span> Revisão</span>
+    <span class="legend-item"><span class="color-box questions"></span> Questões</span>
+    <span class="legend-item"><span class="color-box summary"></span> Resumo</span>
+    <span class="legend-item"><span class="color-box rest"></span> Descanso</span>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="custom-modal-overlay" id="activityModal">
+  <div class="custom-modal">
+    <h4 id="modalTitle">Definir atividade</h4>
+    <div class="modal-date" id="modalDate">--</div>
+    <div class="activity-options">
+      <div class="activity-btn" data-value="study">
+        <span class="icon">📚</span> Estudo
+      </div>
+      <div class="activity-btn" data-value="review">
+        <span class="icon">🔄</span> Revisão
+      </div>
+      <div class="activity-btn" data-value="questions">
+        <span class="icon">❓</span> Questões
+      </div>
+      <div class="activity-btn" data-value="summary">
+        <span class="icon">📝</span> Resumo
+      </div>
+      <div class="activity-btn" data-value="rest">
+        <span class="icon">😴</span> Descanso
+      </div>
+      <div class="activity-btn" data-value="none">
+        <span class="icon">🗑️</span> Limpar
+      </div>
+    </div>
+    <div>
+      <textarea id="notesInput" rows="2" placeholder="Observações (opcional)"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveActivity()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('activityModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalDate = document.getElementById('modalDate');
+  const notesInput = document.getElementById('notesInput');
+  let selectedDate = null;
+  let selectedActivity = null;
+
+  function openModal(el) {
+    selectedDate = el.dataset.date;
+    const dayNumber = el.querySelector('.day-number')?.textContent || '';
+    modalDate.textContent = `📅 ${selectedDate}`;
+    modalTitle.textContent = `Atividade para dia ${dayNumber}`;
+    notesInput.value = '';
+
+    // Verifica se já tem atividade
+    const hasActivity = el.classList.contains('has-study') || 
+                        el.classList.contains('has-review') || 
+                        el.classList.contains('has-questions') || 
+                        el.classList.contains('has-summary') || 
+                        el.classList.contains('has-rest');
+    
+    // Limpa seleção anterior
+    document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('selected'));
+
+    if (hasActivity) {
+      let act = '';
+      if (el.classList.contains('has-study')) act = 'study';
+      else if (el.classList.contains('has-review')) act = 'review';
+      else if (el.classList.contains('has-questions')) act = 'questions';
+      else if (el.classList.contains('has-summary')) act = 'summary';
+      else if (el.classList.contains('has-rest')) act = 'rest';
+      if (act) {
+        document.querySelector(`.activity-btn[data-value="${act}"]`)?.classList.add('selected');
+        selectedActivity = act;
+        // Pega observações
+        const label = el.querySelector('.activity-label');
+        if (label && label.textContent.trim()) {
+          notesInput.value = label.textContent.trim();
+        }
+      }
+    } else {
+      selectedActivity = null;
+    }
+    modal.classList.add('active');
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+  }
+
+  document.querySelectorAll('.activity-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedActivity = this.dataset.value;
+    });
+  });
+
+  function saveActivity() {
+    if (!selectedDate) return;
+    const activity = selectedActivity || 'none';
+    const notes = notesInput.value.trim();
+
+    fetch("{% url 'calendar:set_activity' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new URLSearchParams({
+        date: selectedDate,
+        activity: activity,
+        notes: notes
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert('Erro: ' + (data.error || ''));
+      }
+    })
+    .catch(err => alert('Erro: ' + err));
+  }
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+</script>
+{% endblock %}

@@ -159,7 +159,7 @@
   </div>
   <div class="study-info mt-4">
     <span id="session-timer" class="badge bg-secondary">Sessão: 0 min</span>
-    <span id="topic-name" class="badge bg-primary ms-2">Tópico: --</span>
+    <span id="assunto-name" class="badge bg-primary ms-2">Assunto: --</span>
   </div>
 </div>
 
@@ -183,8 +183,8 @@
         </select>
       </div>
       <div class="mb-3">
-        <label for="topico-select" class="form-label">Tópico</label>
-        <select class="form-select" id="topico-select" disabled required>
+        <label for="assunto-select" class="form-label">Assunto</label>
+        <select class="form-select" id="assunto-select" disabled required>
           <option value="">Primeiro selecione uma matéria</option>
         </select>
       </div>
@@ -205,20 +205,20 @@
     let timerInterval = null;
     let seconds = 0;
     let sessionId = null;
-    let selectedTopicName = '';
+    let selectedAssuntoName = '';
 
     const display = document.getElementById('timer-display');
     const startBtn = document.getElementById('start-btn');
     const pauseBtn = document.getElementById('pause-btn');
     const endBtn = document.getElementById('end-btn');
     const sessionTimer = document.getElementById('session-timer');
-    const topicNameEl = document.getElementById('topic-name');
+    const assuntoNameEl = document.getElementById('assunto-name');
     const currentInfo = document.getElementById('current-study-info');
 
     const modal = document.getElementById('customModal');
     const estudoSelect = document.getElementById('estudo-select');
     const materiaSelect = document.getElementById('materia-select');
-    const topicoSelect = document.getElementById('topico-select');
+    const assuntoSelect = document.getElementById('assunto-select');
     const confirmBtn = document.getElementById('confirm-study-btn');
     const cancelBtn = document.getElementById('cancel-modal-btn');
 
@@ -228,8 +228,8 @@
       estudoSelect.value = '';
       materiaSelect.disabled = true;
       materiaSelect.innerHTML = '<option value="">Primeiro selecione um estudo</option>';
-      topicoSelect.disabled = true;
-      topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+      assuntoSelect.disabled = true;
+      assuntoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
       confirmBtn.disabled = true;
     }
 
@@ -249,8 +249,8 @@
       if (!estudoId) {
         materiaSelect.disabled = true;
         materiaSelect.innerHTML = '<option value="">Primeiro selecione um estudo</option>';
-        topicoSelect.disabled = true;
-        topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+        assuntoSelect.disabled = true;
+        assuntoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
         confirmBtn.disabled = true;
         return;
       }
@@ -265,8 +265,8 @@
             opt.textContent = m.name;
             materiaSelect.appendChild(opt);
           });
-          topicoSelect.disabled = true;
-          topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+          assuntoSelect.disabled = true;
+          assuntoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
           confirmBtn.disabled = true;
         })
         .catch(err => console.error('Erro ao carregar matérias:', err));
@@ -275,49 +275,49 @@
     materiaSelect.addEventListener('change', function() {
       const materiaId = this.value;
       if (!materiaId) {
-        topicoSelect.disabled = true;
-        topicoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+        assuntoSelect.disabled = true;
+        assuntoSelect.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
         confirmBtn.disabled = true;
         return;
       }
-      fetch(`/estudo/api/topicos-por-materia/${materiaId}/`)
+      fetch(`/estudo/api/assuntos-por-materia/${materiaId}/`)
         .then(r => r.json())
         .then(data => {
-          topicoSelect.disabled = false;
-          topicoSelect.innerHTML = '<option value="">Selecione...</option>';
-          data.forEach(t => {
+          assuntoSelect.disabled = false;
+          assuntoSelect.innerHTML = '<option value="">Selecione...</option>';
+          data.forEach(a => {
             const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = t.name;
-            topicoSelect.appendChild(opt);
+            opt.value = a.id;
+            opt.textContent = a.name;
+            assuntoSelect.appendChild(opt);
           });
           confirmBtn.disabled = true;
         })
-        .catch(err => console.error('Erro ao carregar tópicos:', err));
+        .catch(err => console.error('Erro ao carregar assuntos:', err));
     });
 
-    topicoSelect.addEventListener('change', function() {
+    assuntoSelect.addEventListener('change', function() {
       confirmBtn.disabled = !this.value;
       if (this.value) {
-        selectedTopicName = this.options[this.selectedIndex].text;
+        selectedAssuntoName = this.options[this.selectedIndex].text;
       }
     });
 
     confirmBtn.addEventListener('click', function() {
-      const topicoId = topicoSelect.value;
-      if (!topicoId) return;
+      const assuntoId = assuntoSelect.value;
+      if (!assuntoId) return;
       closeModal();
 
       fetch("{% url 'study:start_session' %}", {
         method: 'POST',
         headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-        body: new URLSearchParams({ topic: topicoId })
+        body: new URLSearchParams({ topic: assuntoId })
       })
       .then(r => r.json())
       .then(data => {
         sessionId = data.session_id;
-        currentInfo.innerHTML = `<strong>Estudando:</strong> ${selectedTopicName}`;
-        topicNameEl.textContent = `Tópico: ${selectedTopicName}`;
+        currentInfo.innerHTML = `<strong>Estudando:</strong> ${selectedAssuntoName}`;
+        assuntoNameEl.textContent = `Assunto: ${selectedAssuntoName}`;
         if (timerInterval) clearInterval(timerInterval);
         seconds = 0;
         updateDisplay();
@@ -362,7 +362,6 @@
       }
     });
 
-    // ====== FINALIZAR (CORRIGIDO) ======
     endBtn.addEventListener('click', function() {
       if (timerInterval) clearInterval(timerInterval);
 
@@ -372,10 +371,8 @@
       }
 
       const durationMinutes = Math.floor(seconds / 60);
-      // Se menos de 1 minuto, avisar
       if (durationMinutes < 1) {
         if (!confirm('Você estudou menos de 1 minuto. Deseja registrar mesmo assim?')) {
-          // Reativa o cronômetro se cancelar
           if (!timerInterval) {
             timerInterval = setInterval(() => {
               seconds++;
@@ -406,8 +403,7 @@
           alert(`✅ Sessão finalizada! ${data.duration} minutos registrados.`);
           resetTimer();
           currentInfo.innerHTML = `<span class="text-muted">Nenhum estudo em andamento</span>`;
-          topicNameEl.textContent = 'Tópico: --';
-          // Atualiza dashboard se possível (recarregar a página? Opcional)
+          assuntoNameEl.textContent = 'Assunto: --';
         } else {
           throw new Error(data.error || 'Erro desconhecido');
         }
@@ -415,7 +411,6 @@
       .catch(err => {
         console.error('Erro ao finalizar sessão:', err);
         alert('❌ Erro ao finalizar sessão. Tente novamente.');
-        // Reativa o cronômetro se houve erro
         if (!timerInterval) {
           timerInterval = setInterval(() => {
             seconds++;
@@ -435,7 +430,7 @@
       endBtn.disabled = true;
       pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
       sessionId = null;
-      selectedTopicName = '';
+      selectedAssuntoName = '';
     }
   });
 </script>

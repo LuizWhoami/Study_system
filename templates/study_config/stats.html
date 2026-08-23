@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Estatísticas{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 1.2rem;
+    text-align: center;
+    transition: transform 0.3s;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+  }
+  .stat-card .number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #a78bfa;
+    line-height: 1.2;
+  }
+  .stat-card .label {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+  .stat-card .icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+    display: block;
+  }
+  .progress-subject {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .progress-subject:last-child {
+    border-bottom: none;
+  }
+  .progress-subject .bar {
+    flex: 1;
+    margin: 0 1rem;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-subject .bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .progress-subject .percent {
+    font-weight: 600;
+    color: #f1f5f9;
+    min-width: 40px;
+    text-align: right;
+  }
+  .stats-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .stats-section h4 {
+    color: #f1f5f9;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  .empty-state {
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+    padding: 2rem 0;
+  }
+  .week-plan-mini {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-top: 0.5rem;
+  }
+  .week-plan-mini .day-box {
+    text-align: center;
+    padding: 0.3rem 0;
+    border-radius: 0.5rem;
+    background: rgba(255,255,255,0.03);
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+  }
+  .week-plan-mini .day-box.active {
+    border: 1px solid rgba(167,139,250,0.3);
+    background: rgba(167,139,250,0.1);
+    color: #fff;
+  }
+  .week-plan-mini .day-box .day-label {
+    font-weight: 600;
+    display: block;
+  }
+  .week-plan-mini .day-box .day-icon {
+    font-size: 1.2rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="mb-4"><i class="bi bi-bar-chart-fill me-2"></i>Estatísticas</h2>
+
+  <!-- Cards resumo -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="icon">⏱️</span>
+      <div class="number">{{ total_hours }}h</div>
+      <div class="label">Total estudado</div>
+    </div>
+    <div class="stat-card">
+      <span class="icon">📅</span>
+      <div class="number">{{ hours_week }}h</div>
+      <div class="label">Esta semana</div>
+    </div>
+    <div class="stat-card">
+      <span class="icon">🔄</span>
+      <div class="number">{{ pending_reviews_count }}</div>
+      <div class="label">Revisões pendentes</div>
+    </div>
+    <div class="stat-card">
+      <span class="icon">❓</span>
+      <div class="number">{{ questions_total }}</div>
+      <div class="label">Questões cadastradas</div>
+    </div>
+    <div class="stat-card">
+      <span class="icon">🃏</span>
+      <div class="number">{{ flashcards_total }}</div>
+      <div class="label">Flashcards</div>
+    </div>
+    <div class="stat-card">
+      <span class="icon">📈</span>
+      <div class="number">{{ hours_progress }}%</div>
+      <div class="label">Meta semanal</div>
+    </div>
+  </div>
+
+  <!-- Planejamento da semana (do calendário) -->
+  <div class="stats-section">
+    <h4>📋 Planejamento da semana</h4>
+    {% if week_plan %}
+      <div class="week-plan-mini">
+        {% for day in week_plan %}
+          <div class="day-box {% if day.is_today %}active{% endif %}">
+            <span class="day-label">{{ day.day_name }}</span>
+            <span class="day-icon">
+              {% if day.activity == 'study' %}📚
+              {% elif day.activity == 'review' %}🔄
+              {% elif day.activity == 'questions' %}❓
+              {% elif day.activity == 'summary' %}📝
+              {% elif day.activity == 'rest' %}😴
+              {% else %}·
+              {% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="mt-2 text-muted small">
+        📚 Estudo: {{ activities_count.study|default:0 }} |
+        🔄 Revisão: {{ activities_count.review|default:0 }} |
+        ❓ Questões: {{ activities_count.questions|default:0 }} |
+        📝 Resumo: {{ activities_count.summary|default:0 }} |
+        😴 Descanso: {{ activities_count.rest|default:0 }}
+      </div>
+    {% else %}
+      <div class="empty-state">Nenhum planejamento para esta semana. <a href="{% url 'calendar:calendar' %}">Planeje agora</a>.</div>
+    {% endif %}
+  </div>
+
+  <!-- Progresso por matéria -->
+  <div class="stats-section">
+    <h4>📚 Progresso por matéria</h4>
+    {% if subjects_progress %}
+      {% for subject, data in subjects_progress.items %}
+        <div class="progress-subject">
+          <span style="color:#f1f5f9; font-weight:500;">{{ subject }}</span>
+          <div class="bar">
+            <div class="fill" style="width: {% widthratio data.reviewed data.total 100 %}%;"></div>
+          </div>
+          <span class="percent">{{ data.reviewed }}/{{ data.total }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">Nenhum conteúdo registrado ainda. Estude algo para começar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Flashcards e pendências -->
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="stats-section">
+        <h4>🃏 Flashcards</h4>
+        <p><strong>Total:</strong> {{ flashcards_total }}</p>
+        <p><strong>Pendentes hoje:</strong> {{ flashcards_pending }}</p>
+        {% if flashcards_pending > 0 %}
+          <a href="{% url 'flashcards:listar' %}" class="btn btn-sm btn-primary">Revisar agora</a>
+        {% else %}
+          <span class="text-muted">Nenhum flashcard pendente.</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="stats-section">
+        <h4>🎯 Meta semanal</h4>
+        <p><strong>Meta:</strong> {{ target_hours }}h</p>
+        <p><strong>Estudado:</strong> {{ hours_week }}h</p>
+        <div class="progress mt-2" style="height:12px;">
+          <div class="progress-bar" role="progressbar" style="width: {{ hours_progress }}%;" aria-valuenow="{{ hours_progress }}" aria-valuemin="0" aria-valuemax="100">{{ hours_progress }}%</div>
+        </div>
+        {% if not config_active %}
+          <p class="text-muted mt-2">Configure seu plano em <a href="{% url 'study_config:config' %}">Configurações</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sessões recentes -->
+  <div class="stats-section">
+    <h4>📋 Últimas sessões</h4>
+    {% if last_sessions %}
+      <ul class="list-group list-group-flush">
+        {% for session in last_sessions %}
+          <li class="list-group-item d-flex justify-content-between align-items-center" style="background:transparent; border-color:rgba(255,255,255,0.05);">
+            <span>{{ session.topic.name|default:"Sem tópico" }}</span>
+            <span class="text-muted">{{ session.duration_minutes }} min</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">Nenhuma sessão registrada. Use o cronômetro para começar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Link para configuração -->
+  <div class="text-center mt-3">
+    <a href="{% url 'study_config:config' %}" class="btn btn-outline-primary">
+      <i class="bi bi-gear me-1"></i> Configurar plano de estudos
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -51,9 +51,11 @@ class SubjectCreateView(LoginRequiredMixin, CreateView):
         return initial
 
     def form_valid(self, form):
-        response = super().form_valid(form)
         self.success_url = reverse('subjects:by_contest', kwargs={'estudo_id': form.instance.contest.id})
-        return response
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.success_url or reverse_lazy('subjects:list')
 
 class SubjectUpdateView(LoginRequiredMixin, UpdateView):
     model = Subject
@@ -69,9 +71,11 @@ class SubjectUpdateView(LoginRequiredMixin, UpdateView):
         return kwargs
 
     def form_valid(self, form):
-        response = super().form_valid(form)
         self.success_url = reverse('subjects:by_contest', kwargs={'estudo_id': form.instance.contest.id})
-        return response
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.success_url or reverse_lazy('subjects:list')
 
 class SubjectDeleteView(LoginRequiredMixin, DeleteView):
     model = Subject
@@ -117,9 +121,11 @@ class TopicCreateView(LoginRequiredMixin, CreateView):
         return initial
 
     def form_valid(self, form):
-        response = super().form_valid(form)
         self.success_url = reverse('subjects:topics_by_subject', kwargs={'subject_id': form.instance.subject.id})
-        return response
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.success_url or reverse_lazy('subjects:list')
 
 class TopicUpdateView(LoginRequiredMixin, UpdateView):
     model = Topic
@@ -135,9 +141,11 @@ class TopicUpdateView(LoginRequiredMixin, UpdateView):
         return kwargs
 
     def form_valid(self, form):
-        response = super().form_valid(form)
         self.success_url = reverse('subjects:topics_by_subject', kwargs={'subject_id': form.instance.subject.id})
-        return response
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.success_url or reverse_lazy('subjects:list')
 
 class TopicDeleteView(LoginRequiredMixin, DeleteView):
     model = Topic
@@ -148,22 +156,36 @@ class TopicDeleteView(LoginRequiredMixin, DeleteView):
         return Topic.objects.filter(subject__contest__user=self.request.user)
 
 # ============================
-# AÇÕES DE CONCLUSÃO
+# AÇÕES DE ALTERAÇÃO DE STATUS
 # ============================
 
-def concluir_materia(request, pk):
+def alterar_status_materia(request, pk):
+    """Altera o status da matéria entre 'studying' e 'mastered'."""
     subject = get_object_or_404(Subject, pk=pk, contest__user=request.user)
-    # Marca todos os tópicos da matéria como 'mastered'
-    subject.topics.update(status='mastered')
-    # Atualiza o status da matéria para 'mastered'
-    subject.status = 'mastered'
+    novo_status = request.POST.get('status')
+    if novo_status not in ['studying', 'mastered']:
+        messages.error(request, 'Status inválido.')
+        return redirect('subjects:by_contest', estudo_id=subject.contest.id)
+
+    subject.status = novo_status
     subject.save()
-    messages.success(request, f'Matéria "{subject.name}" concluída com sucesso!')
+
+    if novo_status == 'mastered':
+        subject.topics.update(status='mastered')
+
+    messages.success(request, f'Matéria "{subject.name}" alterada para {subject.get_status_display()}.')
     return redirect('subjects:by_contest', estudo_id=subject.contest.id)
 
-def concluir_topico(request, pk):
+def alterar_status_topico(request, pk):
+    """Altera o status de um tópico entre 'studying' e 'mastered'."""
     topic = get_object_or_404(Topic, pk=pk, subject__contest__user=request.user)
-    topic.status = 'mastered'
+    novo_status = request.POST.get('status')
+    if novo_status not in ['studying', 'mastered']:
+        messages.error(request, 'Status inválido.')
+        return redirect('subjects:topics_by_subject', subject_id=topic.subject.id)
+
+    topic.status = novo_status
     topic.save()
-    messages.success(request, f'Assunto "{topic.name}" concluído!')
+
+    messages.success(request, f'Assunto "{topic.name}" alterado para {topic.get_status_display()}.')
     return redirect('subjects:topics_by_subject', subject_id=topic.subject.id)

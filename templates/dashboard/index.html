@@ -58,7 +58,6 @@
   </div>
 </div>
 
-<!-- Segunda linha -->
 <div class="row g-4 mt-2">
   <div class="col-md-6">
     <div class="card h-100">
@@ -94,6 +93,77 @@
   </div>
 </div>
 
+<!-- NOVA SEÇÃO: PLANEJAMENTO DA SEMANA (CALENDÁRIO) -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Planejamento da Semana</h5>
+        <a href="{% url 'calendar:calendar' %}" class="btn btn-sm btn-outline-primary">Ver calendário</a>
+      </div>
+      <div class="card-body">
+        {% if has_plan %}
+          <div class="row g-2">
+            {% for day in week_plan %}
+              <div class="col text-center">
+                <div class="p-2 rounded {% if day.is_today %}bg-primary bg-opacity-25 border border-primary{% endif %}" 
+                     style="background: rgba(255,255,255,0.03);">
+                  <div class="small text-muted">{{ day.day_name }}</div>
+                  <div class="mt-1">
+                    {% if day.activity == 'study' %}
+                      <span class="badge bg-primary" style="font-size:0.8rem;">📚 Estudo</span>
+                    {% elif day.activity == 'review' %}
+                      <span class="badge bg-warning text-dark" style="font-size:0.8rem;">🔄 Revisão</span>
+                    {% elif day.activity == 'questions' %}
+                      <span class="badge bg-info" style="font-size:0.8rem;">❓ Questões</span>
+                    {% elif day.activity == 'summary' %}
+                      <span class="badge bg-secondary" style="font-size:0.8rem;">📝 Resumo</span>
+                    {% elif day.activity == 'rest' %}
+                      <span class="badge bg-dark" style="font-size:0.8rem;">😴 Descanso</span>
+                    {% else %}
+                      <span class="text-muted" style="font-size:0.7rem;">—</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="row mt-3">
+            <div class="col-12">
+              <small class="text-muted">
+                📚 Estudo: {{ activities_count.study }} | 
+                🔄 Revisão: {{ activities_count.review }} | 
+                ❓ Questões: {{ activities_count.questions }} | 
+                📝 Resumo: {{ activities_count.summary }} | 
+                😴 Descanso: {{ activities_count.rest }}
+              </small>
+            </div>
+          </div>
+        {% else %}
+          <p class="text-muted text-center my-3">
+            Nenhum planejamento para esta semana. 
+            <a href="{% url 'calendar:calendar' %}">Clique aqui para planejar seus dias.</a>
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Revisões Pendentes -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes (próximos 3 dias)</h5>
+      </div>
+      <div class="card-body" id="pending-reviews-list">
+        <div class="text-center text-muted">Carregando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Botão para Visão Geral -->
 <div class="row mt-4">
   <div class="col-12 text-center">
@@ -102,4 +172,43 @@
     </a>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch('/estudo/pending-reviews/')
+      .then(r => r.json())
+      .then(data => {
+        const container = document.getElementById('pending-reviews-list');
+        if (data.length === 0) {
+          container.innerHTML = '<div class="alert alert-success">🎉 Nenhuma revisão pendente nos próximos 3 dias!</div>';
+          return;
+        }
+        let html = '<div class="list-group">';
+        data.forEach(item => {
+          const days = item.days_until;
+          let badgeClass = 'bg-success';
+          if (days <= 0) badgeClass = 'bg-danger';
+          else if (days === 1) badgeClass = 'bg-warning text-dark';
+          html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>${item.topic}</strong>
+                <span class="text-muted ms-2">(${item.subject})</span>
+                <span class="badge bg-secondary ms-2">${item.difficulty}</span>
+              </div>
+              <span class="badge ${badgeClass} rounded-pill">
+                ${days <= 0 ? '🔥 Hoje' : days + ' dia(s)'}
+              </span>
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      })
+      .catch(err => {
+        document.getElementById('pending-reviews-list').innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
+        console.error(err);
+      });
+  });
+</script>
 {% endblock %}

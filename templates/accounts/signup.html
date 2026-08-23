@@ -1,18 +1,195 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastrar | LS Study{% endblock %}
+
+{% block extra_css %}
+<style>
+  body {
+    background: linear-gradient(145deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .signup-container {
+    max-width: 440px;
+    width: 100%;
+    padding: 1.5rem;
+  }
+  .signup-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 2rem;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 25px 50px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .signup-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 35px 60px -15px rgba(0,0,0,0.8);
+  }
+  .signup-header {
+    text-align: center;
+    margin-bottom: 1.8rem;
+  }
+  .signup-header .logo-icon {
+    font-size: 2.8rem;
+    color: #6ee7b7;
+    background: rgba(110, 231, 183, 0.12);
+    width: 76px;
+    height: 76px;
+    line-height: 76px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(110, 231, 183, 0.15);
+    backdrop-filter: blur(4px);
+  }
+  .signup-header h2 {
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin-top: 0.5rem;
+  }
+  .signup-header p {
+    color: rgba(255,255,255,0.5);
+    font-weight: 400;
+    font-size: 0.95rem;
+  }
+  .form-control {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.25rem;
+    padding: 0.85rem 1.25rem;
+    color: #f1f5f9;
+    font-weight: 400;
+    transition: all 0.2s ease;
+  }
+  .form-control:focus {
+    background: rgba(255,255,255,0.07);
+    border-color: #6ee7b7;
+    box-shadow: 0 0 0 4px rgba(110, 231, 183, 0.12);
+    color: #fff;
+  }
+  .form-control::placeholder {
+    color: rgba(255,255,255,0.3);
+    font-weight: 300;
+  }
+  .form-label {
+    color: rgba(255,255,255,0.6);
+    font-weight: 500;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+  }
+  .btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 20px -8px rgba(16, 185, 129, 0.4);
+  }
+  .btn-success:hover {
+    transform: scale(1.02);
+    box-shadow: 0 12px 28px -8px rgba(16, 185, 129, 0.6);
+    background: linear-gradient(135deg, #34d399, #10b981);
+  }
+  .btn-success:active {
+    transform: scale(0.97);
+  }
+  .text-link {
+    color: #6ee7b7;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .text-link:hover {
+    color: #a7f3d0;
+    text-decoration: underline;
+  }
+  .alert-danger {
+    background: rgba(239, 68, 68, 0.10);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    border-radius: 1rem;
+    color: #fca5a5;
+    padding: 0.75rem 1rem;
+    backdrop-filter: blur(4px);
+    font-size: 0.9rem;
+  }
+  .alert-danger ul {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    padding-left: 1.25rem;
+  }
+  .alert-danger li {
+    list-style: disc;
+  }
+  .hr-divider {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    margin: 1.5rem 0;
+  }
+  @media (max-width: 480px) {
+    .signup-card { padding: 2rem 1.25rem; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Cadastro</div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-primary">Cadastrar</button>
-          <a href="{% url 'accounts:login' %}" class="btn btn-link">Já tenho conta</a>
-        </form>
-      </div>
+<div class="signup-container">
+  <div class="signup-card">
+    <div class="signup-header">
+      <div class="logo-icon"><i class="bi bi-person-plus-fill"></i></div>
+      <h2>Crie sua conta</h2>
+      <p>Comece a estudar com foco e organização</p>
     </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="username" class="form-label">Usuário</label>
+        <input type="text" name="username" id="username" class="form-control" placeholder="Escolha um nome" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">E-mail</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="seu@email.com" required>
+      </div>
+      <div class="mb-3">
+        <label for="password1" class="form-label">Senha</label>
+        <input type="password" name="password1" id="password1" class="form-control" placeholder="Mínimo 8 caracteres" required>
+      </div>
+      <div class="mb-3">
+        <label for="password2" class="form-label">Confirme a senha</label>
+        <input type="password" name="password2" id="password2" class="form-control" placeholder="Digite novamente" required>
+      </div>
+      {% if form.errors %}
+        <div class="alert-danger mb-3">
+          <i class="bi bi-exclamation-triangle me-1"></i> Corrija os erros:
+          <ul>
+            {% for field, errors in form.errors.items %}
+              {% for error in errors %}
+                <li><strong>{{ field }}:</strong> {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      <button type="submit" class="btn-success w-100">
+        <i class="bi bi-person-plus me-2"></i>Criar conta
+      </button>
+    </form>
+
+    <hr class="hr-divider">
+    <p class="text-center mb-0" style="color: rgba(255,255,255,0.5);">
+      Já tem conta? <a href="{% url 'accounts:login' %}" class="text-link">Faça login</a>
+    </p>
   </div>
 </div>
 {% endblock %}

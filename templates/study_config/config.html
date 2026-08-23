@@ -1,0 +1,723 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Configuração de Estudos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .config-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .step-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+  .step-indicator::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    z-index: 0;
+  }
+  .step-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1;
+    cursor: pointer;
+  }
+  .step-dot .circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: rgba(255,255,255,0.3);
+    transition: all 0.3s;
+  }
+  .step-dot.active .circle {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border-color: #a78bfa;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  }
+  .step-dot.completed .circle {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #6ee7b7;
+  }
+  .step-dot .label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.3);
+    font-weight: 500;
+  }
+  .step-dot.active .label {
+    color: #a78bfa;
+  }
+  .step-content {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 2rem;
+    padding: 2rem;
+  }
+  .step-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 0.5rem;
+  }
+  .step-subtitle {
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 1.5rem;
+  }
+  .config-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s;
+  }
+  .config-card:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  .config-card label {
+    color: rgba(255,255,255,0.6);
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+  .config-card .form-control, .config-card .form-select {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    color: #f1f5f9;
+  }
+  .config-card .form-control:focus, .config-card .form-select:focus {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+  }
+  .config-card .form-check-input {
+    background-color: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+  }
+  .config-card .form-check-input:checked {
+    background-color: #7c3aed;
+    border-color: #7c3aed;
+  }
+  .config-card .form-check-label {
+    color: #c0c8e0;
+  }
+  .preview-box {
+    background: rgba(0,0,0,0.2);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .conflict-badge {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+  }
+  .nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+  }
+  .btn-prev {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 0.6rem 2rem;
+    color: #c0c8e0;
+    transition: all 0.25s;
+  }
+  .btn-prev:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  .btn-next {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.6rem 2rem;
+    color: #fff;
+    font-weight: 600;
+    transition: all 0.25s;
+  }
+  .btn-next:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px -8px rgba(124, 58, 237, 0.5);
+  }
+  .btn-next:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-save {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.6rem 2rem;
+    color: #fff;
+    font-weight: 600;
+    transition: all 0.25s;
+  }
+  .btn-save:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px -8px rgba(16, 185, 129, 0.5);
+  }
+  .subject-checkbox-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  @media (max-width: 600px) {
+    .subject-checkbox-group {
+      grid-template-columns: 1fr;
+    }
+    .step-dot .label {
+      font-size: 0.6rem;
+    }
+    .step-dot .circle {
+      width: 32px;
+      height: 32px;
+      font-size: 0.8rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-container">
+  <h2 class="mb-4"><i class="bi bi-gear me-2"></i>Configuração de Estudos</h2>
+  <p class="text-muted mb-4">Configure seu plano de estudos personalizado. Suas alterações afetarão o Dashboard, Calendário e planejamento.</p>
+
+  <!-- Barra de Progresso -->
+  <div class="step-indicator" id="stepIndicator">
+    <div class="step-dot active" data-step="1">
+      <div class="circle">1</div>
+      <span class="label">Objetivo</span>
+    </div>
+    <div class="step-dot" data-step="2">
+      <div class="circle">2</div>
+      <span class="label">Matérias</span>
+    </div>
+    <div class="step-dot" data-step="3">
+      <div class="circle">3</div>
+      <span class="label">Disponibilidade</span>
+    </div>
+    <div class="step-dot" data-step="4">
+      <div class="circle">4</div>
+      <span class="label">Metas</span>
+    </div>
+    <div class="step-dot" data-step="5">
+      <div class="circle">5</div>
+      <span class="label">Métodos</span>
+    </div>
+    <div class="step-dot" data-step="6">
+      <div class="circle">6</div>
+      <span class="label">Revisão</span>
+    </div>
+  </div>
+
+  <!-- Área de Conteúdo -->
+  <div class="step-content" id="stepContent">
+    <form id="configForm">
+      {% csrf_token %}
+      
+      <!-- Step 1: Objetivo -->
+      <div class="step-panel" data-step="1">
+        <h3 class="step-title">🎯 O que você quer alcançar?</h3>
+        <p class="step-subtitle">Defina seu objetivo principal para personalizar seu plano.</p>
+        
+        <div class="config-card">
+          <label class="form-label">Objetivo principal</label>
+          <select class="form-select" id="objective" name="objective">
+            <option value="concurso">Preparação para concurso</option>
+            <option value="vestibular">Preparação para vestibular</option>
+            <option value="faculdade">Faculdade</option>
+            <option value="certificacao">Certificação</option>
+            <option value="habilidade">Aprender uma nova habilidade</option>
+            <option value="prova_especifica">Estudar para uma prova específica</option>
+            <option value="rotina">Criar uma rotina geral de estudos</option>
+            <option value="outro">Outro</option>
+          </select>
+          <input type="text" class="form-control mt-2" id="objectiveCustom" name="objective_custom" placeholder="Descreva seu objetivo (se 'Outro')" style="display:none;">
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Qual é o seu nível atual?</label>
+          <select class="form-select" id="level" name="level">
+            <option value="iniciante">Iniciante</option>
+            <option value="intermediario" selected>Intermediário</option>
+            <option value="avancado">Avançado</option>
+          </select>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Qual é a prioridade deste objetivo?</label>
+          <select class="form-select" id="priority" name="priority">
+            <option value="baixa">Baixa</option>
+            <option value="media">Média</option>
+            <option value="alta" selected>Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 2: Matérias -->
+      <div class="step-panel" data-step="2" style="display:none;">
+        <h3 class="step-title">📚 Quais estudos você quer incluir?</h3>
+        <p class="step-subtitle">Selecione os estudos que você deseja planejar.</p>
+
+        <div class="config-card">
+          <label class="form-label">Quantas matérias você quer estudar?</label>
+          <select class="form-select" id="maxSubjects" name="max_subjects">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7+</option>
+          </select>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Selecione os estudos</label>
+          <div class="subject-checkbox-group" id="subjectCheckboxGroup">
+            {% for contest in contests %}
+              <div class="form-check">
+                <input class="form-check-input subject-checkbox" type="checkbox" 
+                       name="selected_contests" value="{{ contest.id }}" 
+                       id="contest_{{ contest.id }}"
+                       {% if contest.id in selected_ids %}checked{% endif %}>
+                <label class="form-check-label" for="contest_{{ contest.id }}">
+                  {{ contest.name }}
+                  <span class="text-muted d-block small">{{ contest.organization|default:"Sem órgão" }}</span>
+                </label>
+              </div>
+            {% empty %}
+              <p class="text-muted">Nenhum estudo cadastrado. <a href="{% url 'contests:create' %}">Crie um primeiro.</a></p>
+            {% endfor %}
+          </div>
+          <small class="text-muted">Selecione até a quantidade definida acima.</small>
+        </div>
+      </div>
+
+      <!-- Step 3: Disponibilidade -->
+      <div class="step-panel" data-step="3" style="display:none;">
+        <h3 class="step-title">⏰ Quanto tempo você realmente consegue estudar?</h3>
+        <p class="step-subtitle">Informe sua rotina real para um planejamento viável.</p>
+
+        <div class="config-card">
+          <label class="form-label">Dias da semana</label>
+          <div class="d-flex flex-wrap gap-2">
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="mon" id="day_mon" checked>
+              <label class="form-check-label" for="day_mon">Seg</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="tue" id="day_tue" checked>
+              <label class="form-check-label" for="day_tue">Ter</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="wed" id="day_wed" checked>
+              <label class="form-check-label" for="day_wed">Qua</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="thu" id="day_thu" checked>
+              <label class="form-check-label" for="day_thu">Qui</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="fri" id="day_fri" checked>
+              <label class="form-check-label" for="day_fri">Sex</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="sat" id="day_sat">
+              <label class="form-check-label" for="day_sat">Sáb</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input day-checkbox" type="checkbox" value="sun" id="day_sun">
+              <label class="form-check-label" for="day_sun">Dom</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Horas por dia</label>
+          <input type="number" class="form-control" id="hoursPerDay" name="hours_per_day" value="3" step="0.5" min="0.5" max="12">
+          <small class="text-muted">Quantas horas você consegue estudar por dia, em média?</small>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="studyWeekend" name="study_weekend">
+            <label class="form-check-label" for="studyWeekend">Quero estudar nos finais de semana</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Metas -->
+      <div class="step-panel" data-step="4" style="display:none;">
+        <h3 class="step-title">🎯 Suas metas de estudo</h3>
+        <p class="step-subtitle">Defina metas realistas para manter a consistência.</p>
+
+        <div class="config-card">
+          <label class="form-label">Metas semanais</label>
+          <div class="row">
+            <div class="col-md-6">
+              <input type="number" class="form-control" id="targetHoursWeek" name="target_hours_week" value="15" step="0.5">
+              <small>Horas por semana</small>
+            </div>
+            <div class="col-md-6">
+              <input type="number" class="form-control" id="sessionsPerWeek" name="sessions_per_week" value="5">
+              <small>Sessões por semana</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Meta diária</label>
+          <input type="number" class="form-control" id="dailyGoalHours" name="daily_goal_hours" value="2" step="0.5">
+          <small>Horas mínimas por dia</small>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Meta mensal</label>
+          <input type="number" class="form-control" id="targetHoursMonth" name="target_hours_month" value="60" step="0.5">
+          <small>Horas por mês</small>
+        </div>
+      </div>
+
+      <!-- Step 5: Métodos -->
+      <div class="step-panel" data-step="5" style="display:none;">
+        <h3 class="step-title">🧠 Como você prefere estudar?</h3>
+        <p class="step-subtitle">Selecione as técnicas que você quer incorporar.</p>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="activeRecall" checked>
+            <label class="form-check-label" for="activeRecall">
+              <strong>Recuperação ativa</strong>
+              <span class="d-block text-muted small">Priorizar lembrar o conteúdo sem consultar o material.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="spacedRepetition" checked>
+            <label class="form-check-label" for="spacedRepetition">
+              <strong>Repetição espaçada</strong>
+              <span class="d-block text-muted small">Programar revisões em intervalos progressivos.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="practiceQuestions" checked>
+            <label class="form-check-label" for="practiceQuestions">
+              <strong>Prática com questões</strong>
+              <span class="d-block text-muted small">Inserir sessões de resolução de questões.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="flashcardsActive" checked>
+            <label class="form-check-label" for="flashcardsActive">
+              <strong>Flashcards</strong>
+              <span class="d-block text-muted small">Programar sessões de flashcards.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="interleaving" checked>
+            <label class="form-check-label" for="interleaving">
+              <strong>Intercalação</strong>
+              <span class="d-block text-muted small">Alternar matérias em vez de concentrar em uma só.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="activeReview" checked>
+            <label class="form-check-label" for="activeReview">
+              <strong>Revisão ativa</strong>
+              <span class="d-block text-muted small">Reservar sessões específicas para revisão.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 6: Revisão -->
+      <div class="step-panel" data-step="6" style="display:none;">
+        <h3 class="step-title">🔄 Configuração de Revisões</h3>
+        <p class="step-subtitle">Defina como o sistema vai gerenciar suas revisões.</p>
+
+        <div class="config-card">
+          <label class="form-label">Intervalos de revisão (em dias)</label>
+          <div class="row">
+            <div class="col-md-3"><input type="number" class="form-control interval-input" value="1" data-index="0"></div>
+            <div class="col-md-3"><input type="number" class="form-control interval-input" value="3" data-index="1"></div>
+            <div class="col-md-3"><input type="number" class="form-control interval-input" value="7" data-index="2"></div>
+            <div class="col-md-3"><input type="number" class="form-control interval-input" value="14" data-index="3"></div>
+            <div class="col-md-3 mt-2"><input type="number" class="form-control interval-input" value="30" data-index="4"></div>
+          </div>
+          <small class="text-muted">Exemplo: 1, 3, 7, 14, 30 dias</small>
+        </div>
+
+        <div class="config-card">
+          <label class="form-label">Intensidade das revisões</label>
+          <select class="form-select" id="reviewIntensity">
+            <option value="1">Leve (menos revisões)</option>
+            <option value="2">Moderado</option>
+            <option value="3" selected>Intenso (mais revisões)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Prévia -->
+      <div class="preview-box" id="previewBox">
+        <h5><i class="bi bi-eye me-2"></i>Prévia do seu plano</h5>
+        <div id="previewContent">
+          <p class="text-muted">Selecione as opções para ver a prévia.</p>
+        </div>
+        <div id="conflictsContainer"></div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="nav-buttons">
+        <button type="button" class="btn-prev" id="prevBtn" style="visibility:hidden;">‹ Anterior</button>
+        <button type="button" class="btn-next" id="nextBtn">Próximo ›</button>
+        <button type="button" class="btn-save" id="saveBtn" style="display:none;">💾 Salvar Configuração</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    let currentStep = 1;
+    const totalSteps = 6;
+    const csrfToken = '{{ csrf_token }}';
+
+    // Elementos
+    const stepDots = document.querySelectorAll('.step-dot');
+    const stepPanels = document.querySelectorAll('.step-panel');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const previewContent = document.getElementById('previewContent');
+    const conflictsContainer = document.getElementById('conflictsContainer');
+
+    // Funções de navegação
+    function goToStep(step) {
+      currentStep = step;
+      // Atualiza dots
+      stepDots.forEach((dot, i) => {
+        const num = i + 1;
+        dot.classList.remove('active', 'completed');
+        if (num === step) dot.classList.add('active');
+        else if (num < step) dot.classList.add('completed');
+      });
+      // Atualiza painéis
+      stepPanels.forEach((panel) => {
+        panel.style.display = parseInt(panel.dataset.step) === step ? 'block' : 'none';
+      });
+      // Botões
+      prevBtn.style.visibility = step > 1 ? 'visible' : 'hidden';
+      if (step === totalSteps) {
+        nextBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+      } else {
+        nextBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+      }
+      // Atualiza prévia
+      updatePreview();
+    }
+
+    // Coleta dados do formulário
+    function getFormData() {
+      const selectedContests = Array.from(document.querySelectorAll('.subject-checkbox:checked'))
+        .map(el => parseInt(el.value));
+      const days = Array.from(document.querySelectorAll('.day-checkbox:checked'))
+        .map(el => el.value);
+      const intervals = Array.from(document.querySelectorAll('.interval-input'))
+        .map(el => parseInt(el.value) || 0);
+      
+      return {
+        objective: document.getElementById('objective').value,
+        objective_custom: document.getElementById('objectiveCustom').value,
+        level: document.getElementById('level').value,
+        priority: document.getElementById('priority').value,
+        max_subjects: parseInt(document.getElementById('maxSubjects').value) || 3,
+        selected_contests: selectedContests,
+        available_days: days,
+        hours_per_day: parseFloat(document.getElementById('hoursPerDay').value) || 3,
+        days_per_week: days.length,
+        study_weekend: document.getElementById('studyWeekend').checked,
+        target_hours_week: parseFloat(document.getElementById('targetHoursWeek').value) || 15,
+        target_hours_month: parseFloat(document.getElementById('targetHoursMonth').value) || 60,
+        sessions_per_week: parseInt(document.getElementById('sessionsPerWeek').value) || 5,
+        daily_goal_hours: parseFloat(document.getElementById('dailyGoalHours').value) || 2,
+        active_recall: document.getElementById('activeRecall').checked,
+        spaced_repetition: document.getElementById('spacedRepetition').checked,
+        practice_questions: document.getElementById('practiceQuestions').checked,
+        flashcards_active: document.getElementById('flashcardsActive').checked,
+        interleaving: document.getElementById('interleaving').checked,
+        active_review: document.getElementById('activeReview').checked,
+        review_intervals: intervals.filter(v => v > 0),
+        review_intensity: parseInt(document.getElementById('reviewIntensity').value) || 3,
+      };
+    }
+
+    // Atualiza prévia via AJAX
+    function updatePreview() {
+      const data = getFormData();
+      if (data.selected_contests.length === 0) {
+        previewContent.innerHTML = '<p class="text-muted">Selecione pelo menos uma matéria para ver a prévia.</p>';
+        conflictsContainer.innerHTML = '';
+        return;
+      }
+
+      fetch('/config/preview/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+      })
+      .then(r => r.json())
+      .then(data => {
+        // Resumo
+        let html = `
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="card bg-dark bg-opacity-25">
+                <div class="card-body text-center">
+                  <h6 class="text-muted">Horas/semana</h6>
+                  <p class="display-6 fw-bold text-primary">${data.total_hours}h</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-dark bg-opacity-25">
+                <div class="card-body text-center">
+                  <h6 class="text-muted">Matérias</h6>
+                  <p class="display-6 fw-bold text-success">${data.selected_count}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-dark bg-opacity-25">
+                <div class="card-body text-center">
+                  <h6 class="text-muted">Horas/matéria</h6>
+                  <p class="display-6 fw-bold text-warning">${data.hours_per_subject}h</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${data.recommended_subjects > 0 ? `<p class="mt-2 text-muted">Recomendação: ${data.recommended_subjects} matérias prioritárias.</p>` : ''}
+        `;
+        previewContent.innerHTML = html;
+
+        // Conflitos
+        if (data.conflicts && data.conflicts.length > 0) {
+          let conflictHtml = '<div class="mt-3"><h6 class="text-danger">⚠️ Possíveis ajustes:</h6>';
+          data.conflicts.forEach(c => {
+            conflictHtml += `<div class="conflict-badge">${c.message}</div>`;
+          });
+          conflictHtml += '</div>';
+          conflictsContainer.innerHTML = conflictHtml;
+        } else if (data.selected_count > 0) {
+          conflictsContainer.innerHTML = '<div class="text-success mt-2">✅ Configuração compatível!</div>';
+        } else {
+          conflictsContainer.innerHTML = '';
+        }
+      })
+      .catch(err => {
+        console.error('Erro na prévia:', err);
+        previewContent.innerHTML = '<p class="text-danger">Erro ao carregar prévia.</p>';
+      });
+    }
+
+    // Eventos que disparam prévia
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('change', updatePreview);
+      el.addEventListener('input', updatePreview);
+    });
+
+    // Navegação
+    stepDots.forEach(dot => {
+      dot.addEventListener('click', function() {
+        goToStep(parseInt(this.dataset.step));
+      });
+    });
+
+    prevBtn.addEventListener('click', function() {
+      if (currentStep > 1) goToStep(currentStep - 1);
+    });
+
+    nextBtn.addEventListener('click', function() {
+      if (currentStep < totalSteps) goToStep(currentStep + 1);
+    });
+
+    // Salvar configuração
+    saveBtn.addEventListener('click', function() {
+      const data = getFormData();
+      if (data.selected_contests.length === 0) {
+        alert('Selecione pelo menos uma matéria para configurar.');
+        return;
+      }
+
+      fetch('/config/save/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ ' + data.message);
+          window.location.href = '/';
+        } else {
+          alert('❌ Erro: ' + data.error);
+        }
+      })
+      .catch(err => alert('Erro ao salvar: ' + err));
+    });
+
+    // Inicia com step 1
+    goToStep(1);
+  });
+</script>
+{% endblock %}

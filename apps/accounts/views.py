@@ -14,3 +14,7 @@ class CustomSignupView(CreateView):
     form_class = CustomUserCreationForm
     template_name = 'accounts/signup.html'
     success_url = reverse_lazy('accounts:login')
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('dashboard:index')
+        return super().dispatch(request, *args, **kwargs)
