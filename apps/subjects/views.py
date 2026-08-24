@@ -120,6 +120,17 @@ class TopicCreateView(LoginRequiredMixin, CreateView):
             initial['subject'] = materia_id
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        materia_id = self.request.GET.get('materia')
+        if materia_id:
+            context['subject_id'] = materia_id
+            # Gera a URL de volta com segurança
+            context['back_url'] = reverse('subjects:topics_by_subject', kwargs={'subject_id': materia_id})
+        else:
+            context['back_url'] = '#'
+        return context
+
     def form_valid(self, form):
         self.success_url = reverse('subjects:topics_by_subject', kwargs={'subject_id': form.instance.subject.id})
         return super().form_valid(form)
@@ -160,7 +171,6 @@ class TopicDeleteView(LoginRequiredMixin, DeleteView):
 # ============================
 
 def alterar_status_materia(request, pk):
-    """Altera o status da matéria entre 'studying' e 'mastered'."""
     subject = get_object_or_404(Subject, pk=pk, contest__user=request.user)
     novo_status = request.POST.get('status')
     if novo_status not in ['studying', 'mastered']:
@@ -172,12 +182,13 @@ def alterar_status_materia(request, pk):
 
     if novo_status == 'mastered':
         subject.topics.update(status='mastered')
+    elif novo_status == 'studying':
+        pass
 
     messages.success(request, f'Matéria "{subject.name}" alterada para {subject.get_status_display()}.')
     return redirect('subjects:by_contest', estudo_id=subject.contest.id)
 
 def alterar_status_topico(request, pk):
-    """Altera o status de um tópico entre 'studying' e 'mastered'."""
     topic = get_object_or_404(Topic, pk=pk, subject__contest__user=request.user)
     novo_status = request.POST.get('status')
     if novo_status not in ['studying', 'mastered']:

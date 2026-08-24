@@ -30,23 +30,29 @@
               <i class="bi bi-list-ul me-1"></i> Assuntos
             </a>
             <div class="btn-group btn-group-sm" role="group">
-              <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
-                {% csrf_token %}
-                <input type="hidden" name="status" value="studying">
-                <button type="submit" class="btn btn-outline-warning {% if subject.status == 'studying' %}active{% endif %}" 
-                        title="Marcar como Em andamento">
-                  <i class="bi bi-play-circle"></i>
-                </button>
-              </form>
-              <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
-                {% csrf_token %}
-                <input type="hidden" name="status" value="mastered">
-                <button type="submit" class="btn btn-outline-success {% if subject.status == 'mastered' %}active{% endif %}"
-                        title="Marcar como Concluído">
-                  <i class="bi bi-check-circle"></i>
-                </button>
-              </form>
+              <a href="{% url 'subjects:update' subject.id %}" class="btn btn-outline-secondary" title="Editar matéria">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'subjects:delete' subject.id %}" class="btn btn-outline-danger" title="Excluir matéria" onclick="return confirm('Tem certeza que deseja excluir esta matéria? Todos os assuntos relacionados também serão excluídos.');">
+                <i class="bi bi-trash"></i>
+              </a>
             </div>
+          </div>
+          <div class="mt-2">
+            <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="studying">
+              <button type="submit" class="btn btn-sm btn-outline-warning {% if subject.status == 'studying' %}active{% endif %}" title="Marcar como Em andamento">
+                <i class="bi bi-play-circle"></i> Estudando
+              </button>
+            </form>
+            <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="mastered">
+              <button type="submit" class="btn btn-sm btn-outline-success {% if subject.status == 'mastered' %}active{% endif %}" title="Marcar como Concluído">
+                <i class="bi bi-check-circle"></i> Concluir
+              </button>
+            </form>
           </div>
         </div>
       </div>

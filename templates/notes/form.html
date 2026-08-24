@@ -7,16 +7,48 @@
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card">
-      <div class="card-header">Nova Nota</div>
+      <div class="card-header">{% if object %}Editar Nota{% else %}Nova Nota{% endif %}</div>
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-success">Salvar</button>
-          <a href="{% url 'notes:list' %}" class="btn btn-secondary">Cancelar</a>
+          <div class="mb-3">
+            <label for="id_topic" class="form-label">Tópico <span class="text-muted">(opcional)</span></label>
+            <select name="topic" id="id_topic" class="form-select">
+              <option value="">Nenhum</option>
+              {% for topic in form.fields.topic.queryset %}
+                <option value="{{ topic.id }}" {% if form.instance.topic_id == topic.id %}selected{% endif %}>
+                  {{ topic.subject.contest.name }} → {{ topic.subject.name }} → {{ topic.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="id_title" class="form-label">Título</label>
+            <input type="text" name="title" id="id_title" class="form-control" value="{{ form.instance.title }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="id_content" class="form-label">Conteúdo</label>
+            <textarea name="content" id="id_content" class="form-control markdown-editor" rows="10">{{ form.instance.content }}</textarea>
+          </div>
+          <div class="mb-3">
+            <label for="id_tags" class="form-label">Tags <span class="text-muted">(opcional)</span></label>
+            <select name="tags" id="id_tags" class="form-select" multiple>
+              {% for tag in form.fields.tags.queryset %}
+                <option value="{{ tag.id }}" {% if tag in form.instance.tags.all %}selected{% endif %}>
+                  {{ tag.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" name="is_favorite" id="id_is_favorite" class="form-check-input" {% if form.instance.is_favorite %}checked{% endif %}>
+            <label for="id_is_favorite" class="form-check-label">Favorito</label>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Salvar</button>
         </form>
       </div>
     </div>
+    <a href="{% url 'notes:list' %}" class="btn btn-secondary mt-3">Voltar para lista</a>
   </div>
 </div>
 {% endblock %}

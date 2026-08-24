@@ -14,7 +14,12 @@
         <div class="card-body">
           <h5 class="card-title">{{ note.title }}</h5>
           <p class="card-text text-muted small">
-            <i class="bi bi-tag me-1"></i> {{ note.topic.name }}
+            <i class="bi bi-tag me-1"></i> 
+            {% if note.topic %}
+              {{ note.topic.name }}
+            {% else %}
+              <span class="text-muted">Sem tópico</span>
+            {% endif %}
           </p>
           <p class="card-text">{{ note.content|truncatewords:20 }}</p>
           <div class="d-flex justify-content-between mt-3">
@@ -34,7 +39,7 @@
   {% empty %}
     <div class="col-12">
       <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i> Nenhuma nota criada. 
+        <i class="bi bi-info-circle me-2"></i> Nenhuma nota criada.
         <a href="{% url 'notes:create' %}" class="alert-link">Criar a primeira</a>
       </div>
     </div>

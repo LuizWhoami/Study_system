@@ -9,7 +9,9 @@ class NoteForm(forms.ModelForm):
         widgets = {
             'content': forms.Textarea(attrs={'class': 'markdown-editor'}),
         }
+
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['topic'].queryset = Topic.objects.filter(subject__contest__user=user)
+        self.fields['topic'].required = False  # <--- Torna opcional
         self.fields['tags'].queryset = Tag.objects.filter(user=user)

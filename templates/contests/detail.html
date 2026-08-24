@@ -1,8 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>{{ contest.name }}</h2>
-<p><strong>Orgão:</strong> {{ contest.organization }}</p>
+<p><strong>Órgão:</strong> {{ contest.organization }}</p>
 <p><strong>Cargo:</strong> {{ contest.position }}</p>
+{% if contest.main_topic %}
+  <p><strong>Tópico principal:</strong> {{ contest.main_topic }}</p>
+{% endif %}
 <p><strong>Data da prova:</strong> {{ contest.exam_date|default:"Não definida" }}</p>
 <p><strong>Banca:</strong> {{ contest.board }}</p>
 <p><strong>Status:</strong> {{ contest.get_status_display }}</p>

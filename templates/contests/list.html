@@ -18,12 +18,17 @@
               {{ contest.get_status_display }}
             </span>
           </div>
+          {% if contest.main_topic %}
+            <p class="card-text text-muted small">
+              <i class="bi bi-tag me-1"></i> {{ contest.main_topic }}
+            </p>
+          {% endif %}
           <p class="card-text text-muted small">
             <i class="bi bi-building me-1"></i> {{ contest.organization|default:"-" }}<br>
             <i class="bi bi-person me-1"></i> {{ contest.position|default:"-" }}
           </p>
           <p class="card-text">
-            <i class="bi bi-calendar-event me-1"></i> 
+            <i class="bi bi-calendar-event me-1"></i>
             {{ contest.exam_date|default:"Data não definida" }}
           </p>
           <div class="d-flex justify-content-between mt-3">
@@ -46,7 +51,7 @@
   {% empty %}
     <div class="col-12">
       <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i> Nenhum estudo cadastrado. 
+        <i class="bi bi-info-circle me-2"></i> Nenhum estudo cadastrado.
         <a href="{% url 'contests:create' %}" class="alert-link">Criar o primeiro</a>
       </div>
     </div>

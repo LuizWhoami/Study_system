@@ -9,12 +9,86 @@
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-success">Salvar</button>
-          <a href="{% url 'contests:list' %}" class="btn btn-secondary">Cancelar</a>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_name" class="form-label">Nome</label>
+                {{ form.name }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_organization" class="form-label">Órgão</label>
+                {{ form.organization }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_position" class="form-label">Cargo</label>
+                {{ form.position }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_main_topic" class="form-label">Tópico principal</label>
+                {{ form.main_topic }}
+                <small class="text-muted">Ex: "Direito Constitucional", "Matemática", etc.</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_exam_date" class="form-label">Data da prova</label>
+                {{ form.exam_date }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_expected_date" class="form-label">Data prevista</label>
+                {{ form.expected_date }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_board" class="form-label">Banca</label>
+                {{ form.board }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_status" class="form-label">Status</label>
+                {{ form.status }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_goal_hours" class="form-label">Meta de horas</label>
+                {{ form.goal_hours }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_goal_questions" class="form-label">Meta de questões</label>
+                {{ form.goal_questions }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_priority" class="form-label">Prioridade</label>
+                {{ form.priority }}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="mb-3">
+                <label for="id_notes" class="form-label">Observações</label>
+                {{ form.notes }}
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Salvar</button>
         </form>
       </div>
     </div>
+    <a href="{% url 'contests:list' %}" class="btn btn-secondary mt-3">Voltar</a>
   </div>
 </div>
 {% endblock %}

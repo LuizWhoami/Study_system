@@ -44,3 +44,5 @@ class Contest(models.Model):
             mastered=models.Count('topics', filter=models.Q(topics__status='mastered'))
         )['mastered'] or 0
         return int((mastered / total_topics) * 100)
+
+    main_topic = models.CharField(max_length=255, blank=True, verbose_name="Tópico principal")

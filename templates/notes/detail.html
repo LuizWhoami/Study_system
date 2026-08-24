@@ -12,7 +12,13 @@
   </div>
 </div>
 
-<p><strong>Tópico:</strong> {{ note.topic.name }}</p>
+<p><strong>Tópico:</strong> 
+  {% if note.topic %}
+    {{ note.topic.name }}
+  {% else %}
+    <span class="text-muted">Sem tópico</span>
+  {% endif %}
+</p>
 <div class="border p-3 bg-dark bg-opacity-10 rounded">
   {{ note.content|linebreaks }}
 </div>
@@ -21,6 +27,8 @@
   <strong>Tags:</strong>
   {% for tag in note.tags.all %}
     <span class="badge bg-secondary">{{ tag.name }}</span>
+  {% empty %}
+    <span class="text-muted">Nenhuma tag</span>
   {% endfor %}
 </p>
 
@@ -70,7 +78,6 @@
           `;
         });
         listDiv.innerHTML = html;
-        // Armazena dados para salvar
         window.flashcardsData = data.flashcards;
         window.noteId = noteId;
       })

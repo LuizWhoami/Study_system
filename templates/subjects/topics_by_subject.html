@@ -38,6 +38,14 @@
               </form>
             </div>
           </div>
+          <div class="mt-2 d-flex gap-2">
+            <a href="{% url 'subjects:topic_update' topic.id %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i> Editar
+            </a>
+            <a href="{% url 'subjects:topic_delete' topic.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza que deseja excluir este assunto?');">
+              <i class="bi bi-trash"></i> Excluir
+            </a>
+          </div>
         </div>
       </div>
     </div>

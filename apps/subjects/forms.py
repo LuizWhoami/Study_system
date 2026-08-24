@@ -19,4 +19,9 @@ class TopicForm(forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['subject'].queryset = Subject.objects.filter(contest__user=user)
-        self.fields['parent'].queryset = Topic.objects.filter(subject__contest__user=user)
+        # Filtra os tópicos pais: apenas da mesma matéria e que não sejam o próprio tópico (em edição)
+        self.fields['parent'].queryset = Topic.objects.filter(
+            subject__contest__user=user
+        ).select_related('subject')
+        self.fields['parent'].required = False
+        self.fields['parent'].empty_label = "Nenhum (tópico raiz)"

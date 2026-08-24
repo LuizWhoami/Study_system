@@ -17,7 +17,7 @@ class Tag(models.Model):
 
 class Note(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notes', verbose_name="Usuário")
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='notes', verbose_name="Tópico")
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name='notes', verbose_name="Tópico")
     title = models.CharField(max_length=200, verbose_name="Título")
     content = models.TextField(verbose_name="Conteúdo")
     tags = models.ManyToManyField(Tag, blank=True, related_name='notes', verbose_name="Tags")
