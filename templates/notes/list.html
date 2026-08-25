@@ -7,6 +7,55 @@
   </a>
 </div>
 
+<!-- 📘 Resumo rápido: Como usar as notas -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Como usar as notas</h5>
+    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#helpCollapse" aria-expanded="false">
+      <i class="bi bi-chevron-down"></i>
+    </button>
+  </div>
+  <div class="collapse show" id="helpCollapse">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <h6 class="text-muted">📝 Formatação Markdown</h6>
+          <ul class="list-unstyled small">
+            <li><code># Título</code> → <strong>Título</strong></li>
+            <li><code>## Subtítulo</code> → <strong>Subtítulo</strong></li>
+            <li><code>**negrito**</code> → <strong>negrito</strong></li>
+            <li><code>*itálico*</code> → <em>itálico</em></li>
+            <li><code>~~tachado~~</code> → <del>tachado</del></li>
+            <li><code>- item</code> → lista não ordenada</li>
+            <li><code>- [ ] tarefa</code> → checklist</li>
+            <li><code>> citação</code> → citação</li>
+            <li><code>[texto](url)</code> → link</li>
+            <li><code>`código`</code> → código inline</li>
+            <li><code>```código```</code> → bloco de código</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted">⌨️ Atalhos</h6>
+          <ul class="list-unstyled small">
+            <li><kbd>Ctrl+B</kbd> → <strong>Negrito</strong></li>
+            <li><kbd>Ctrl+I</kbd> → <em>Itálico</em></li>
+            <li><kbd>Ctrl+K</kbd> → Inserir link</li>
+            <li><kbd>Ctrl+S</kbd> → Salvar nota</li>
+          </ul>
+          <h6 class="text-muted mt-2">💡 Dicas</h6>
+          <ul class="list-unstyled small">
+            <li>✅ O preview é atualizado em tempo real</li>
+            <li>✅ Salvamento automático a cada 1,5s</li>
+            <li>✅ Use a toolbar para inserir formatação sem digitar</li>
+            <li>✅ Associe notas a tópicos para organizar melhor</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lista de notas -->
 <div class="row g-4">
   {% for note in notes %}
     <div class="col-md-4 col-lg-3">
