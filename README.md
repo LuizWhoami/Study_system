@@ -15,3 +15,4 @@ Sistema completo para organização de estudos, com foco em produtividade, revis
 5. Execute as migrações: `python manage.py migrate`
 6. Crie um superusuário: `python manage.py createsuperuser`
 7. Inicie o servidor: `python manage.py runserver`
+ 
