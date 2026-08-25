@@ -51,7 +51,6 @@
   .editor-status.error {
     color: #fca5a5;
   }
-  /* Ajuste para o split view do EasyMDE */
   .EasyMDEContainer {
     border-radius: 1rem;
     overflow: hidden;
@@ -97,24 +96,17 @@
 <div class="row justify-content-center">
   <div class="col-12 col-xl-10">
     <div class="card">
-<<<<<<< HEAD
-      <div class="card-header">{% if object %}Editar Nota{% else %}Nova Nota{% endif %}</div>
-=======
       <div class="card-header">
         <h4><i class="bi bi-sticky me-2"></i>{% if object %}Editar Nota{% else %}Nova Nota{% endif %}</h4>
       </div>
->>>>>>> b8f6fe6 (noite)
       <div class="card-body">
         <form method="post" id="note-form">
           {% csrf_token %}
           <div class="mb-3">
-<<<<<<< HEAD
-=======
             <label for="id_title" class="form-label">Título</label>
             <input type="text" name="title" id="id_title" class="form-control" value="{{ form.instance.title }}" required>
           </div>
           <div class="mb-3">
->>>>>>> b8f6fe6 (noite)
             <label for="id_topic" class="form-label">Tópico <span class="text-muted">(opcional)</span></label>
             <select name="topic" id="id_topic" class="form-select">
               <option value="">Nenhum</option>
@@ -125,16 +117,6 @@
               {% endfor %}
             </select>
           </div>
-<<<<<<< HEAD
-          <div class="mb-3">
-            <label for="id_title" class="form-label">Título</label>
-            <input type="text" name="title" id="id_title" class="form-control" value="{{ form.instance.title }}" required>
-          </div>
-          <div class="mb-3">
-            <label for="id_content" class="form-label">Conteúdo</label>
-            <textarea name="content" id="id_content" class="form-control markdown-editor" rows="10">{{ form.instance.content }}</textarea>
-          </div>
-=======
 
           <div class="mb-3">
             <label class="form-label">Conteúdo (Markdown)</label>
@@ -163,7 +145,6 @@
             </div>
           </div>
 
->>>>>>> b8f6fe6 (noite)
           <div class="mb-3">
             <label for="id_tags" class="form-label">Tags <span class="text-muted">(opcional)</span></label>
             <select name="tags" id="id_tags" class="form-select" multiple>
@@ -174,17 +155,11 @@
               {% endfor %}
             </select>
           </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> b8f6fe6 (noite)
           <div class="mb-3 form-check">
             <input type="checkbox" name="is_favorite" id="id_is_favorite" class="form-check-input" {% if form.instance.is_favorite %}checked{% endif %}>
             <label for="id_is_favorite" class="form-check-label">Favorito</label>
           </div>
-<<<<<<< HEAD
-          <button type="submit" class="btn btn-success w-100">Salvar</button>
-=======
 
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success" id="manual-save-btn">
@@ -192,7 +167,6 @@
             </button>
             <a href="{% url 'notes:list' %}" class="btn btn-secondary">Cancelar</a>
           </div>
->>>>>>> b8f6fe6 (noite)
         </form>
       </div>
     </div>
@@ -211,14 +185,13 @@
     let saveTimeout = null;
     let isSaving = false;
 
-    // ===== CONFIGURAÇÃO DO EASY MDE =====
     const easyMDE = new EasyMDE({
       element: textarea,
       autofocus: true,
       spellChecker: false,
       hideIcons: ['guide', 'fullscreen', 'side-by-side', 'preview'],
       showIcons: ['code', 'table', 'horizontal-rule'],
-      toolbar: false, // Usamos nossa toolbar customizada
+      toolbar: false,
       status: false,
       sideBySideFullscreen: false,
       previewClass: 'editor-preview',
@@ -226,30 +199,22 @@
         singleLineBreaks: false,
         codeSyntaxHighlighting: true,
       },
-      // Atalhos personalizados
       shortcuts: {
-        toggleSideBySide: null, // desabilitamos para não conflitar
+        toggleSideBySide: null,
         drawTable: 'Cmd-Alt-T',
       },
-      // Estilos para o preview
       previewRender: function(plainText) {
-        // Renderização padrão do EasyMDE
         return easyMDE.markdown(plainText);
       },
     });
 
-    // ===== ADAPTAR SPLIT VIEW (Editor + Preview) =====
-    // Forçar o modo split view (editor à esquerda, preview à direita)
     setTimeout(() => {
       const editorContainer = document.querySelector('.EasyMDEContainer');
       if (editorContainer) {
-        // O EasyMDE já tem suporte a split view via classe .CodeMirror-side
-        // Vamos ativar o preview ao lado
         easyMDE.toggleSideBySide();
       }
     }, 100);
 
-    // ===== TOOLBAR CUSTOMIZADA =====
     const toolbarButtons = document.querySelectorAll('.btn-tool');
     toolbarButtons.forEach(btn => {
       btn.addEventListener('click', function() {
@@ -285,7 +250,6 @@
           cm.replaceSelection(replacement);
         } else {
           cm.replaceSelection(replacement);
-          // Posiciona o cursor no local apropriado
           if (action === 'link') {
             cm.setCursor(cm.getCursor(), {line: cm.getCursor().line, ch: cm.getCursor().ch - 4});
           }
@@ -295,10 +259,8 @@
       });
     });
 
-    // ===== ATALHOS DE TECLADO =====
     document.addEventListener('keydown', function(e) {
       if (e.target.closest('.CodeMirror')) {
-        // Ctrl+B -> Negrito
         if (e.ctrlKey && e.key === 'b') {
           e.preventDefault();
           const cm = easyMDE.codemirror;
@@ -306,7 +268,6 @@
           cm.replaceSelection(`**${sel}**`);
           if (!cm.getSelection()) cm.setCursor(cm.getCursor());
         }
-        // Ctrl+I -> Itálico
         if (e.ctrlKey && e.key === 'i') {
           e.preventDefault();
           const cm = easyMDE.codemirror;
@@ -314,7 +275,6 @@
           cm.replaceSelection(`*${sel}*`);
           if (!cm.getSelection()) cm.setCursor(cm.getCursor());
         }
-        // Ctrl+K -> Link
         if (e.ctrlKey && e.key === 'k') {
           e.preventDefault();
           const cm = easyMDE.codemirror;
@@ -322,7 +282,6 @@
           cm.replaceSelection(`[${sel}](url)`);
           if (!cm.getSelection()) cm.setCursor(cm.getCursor());
         }
-        // Ctrl+S -> Salvar (submissão do formulário)
         if (e.ctrlKey && e.key === 's') {
           e.preventDefault();
           form.submit();
@@ -330,7 +289,6 @@
       }
     });
 
-    // ===== AUTOSAVE =====
     function triggerAutosave() {
       clearTimeout(saveTimeout);
       saveTimeout = setTimeout(() => {
@@ -373,7 +331,6 @@
         if (data.success) {
           statusEl.textContent = '✅ Salvo';
           statusEl.className = 'editor-status saved';
-          // Se for nova nota, atualiza a URL para edição
           if (data.id && !noteId) {
             window.history.replaceState({}, '', `/notas/${data.id}/editar/`);
           }
@@ -389,21 +346,13 @@
       });
     }
 
-    // Detecta mudanças no editor
     easyMDE.codemirror.on('change', triggerAutosave);
-
-    // Também detecta mudanças no título
     document.getElementById('id_title').addEventListener('input', triggerAutosave);
 
-    // Salvar manualmente ao clicar no botão (já envia o form)
-    // Apenas mostramos status de sucesso após submit
     form.addEventListener('submit', function(e) {
       statusEl.textContent = '⏳ Salvando...';
       statusEl.className = 'editor-status saving';
-      // O submit normal vai recarregar a página, então não precisamos de mais nada.
     });
-
-    // Se a página recarregar com sucesso, o status será substituído.
   });
 </script>
 {% endblock %}

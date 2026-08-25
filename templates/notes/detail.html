@@ -20,14 +20,9 @@
     <span class="text-muted">Sem tópico</span>
   {% endif %}
 </p>
-<<<<<<< HEAD
-<div class="border p-3 bg-dark bg-opacity-10 rounded">
-  {{ note.content|linebreaks }}
-=======
 
 <div class="border p-4 bg-dark bg-opacity-10 rounded note-content">
   {{ note.content|markdown }}
->>>>>>> b8f6fe6 (noite)
 </div>
 
 <p class="mt-3">
@@ -39,7 +34,7 @@
   {% endfor %}
 </p>
 
-<<<<<<< HEAD
+<!-- Botão IA -->
 <div class="mt-4">
   <button class="btn btn-primary" onclick="gerarFlashcards({{ note.id }})">
     <i class="bi bi-magic me-1"></i> Gerar Flashcards com IA
@@ -57,6 +52,26 @@
   </button>
 </div>
 
+<!-- Estilos para Markdown -->
+<style>
+  .note-content h1 { font-size: 2rem; font-weight: 700; color: #f1f5f9; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+  .note-content h2 { font-size: 1.6rem; font-weight: 600; color: #e8e8f0; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+  .note-content h3 { font-size: 1.3rem; font-weight: 600; color: #d0d8e8; margin-top: 1rem; margin-bottom: 0.5rem; }
+  .note-content p { color: #c0c8e0; line-height: 1.6; margin-bottom: 0.75rem; }
+  .note-content ul, .note-content ol { padding-left: 1.5rem; color: #c0c8e0; margin-bottom: 0.75rem; }
+  .note-content li { margin-bottom: 0.25rem; }
+  .note-content blockquote { border-left: 4px solid #a78bfa; padding-left: 1rem; margin: 1rem 0; color: #b0b8d0; }
+  .note-content pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.75rem; overflow-x: auto; color: #e0e8f0; }
+  .note-content code { background: rgba(255,255,255,0.05); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9rem; color: #c0c8e0; }
+  .note-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  .note-content th, .note-content td { border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem; text-align: left; color: #c0c8e0; }
+  .note-content th { background: rgba(255,255,255,0.05); }
+  .note-content a { color: #a78bfa; text-decoration: none; }
+  .note-content a:hover { text-decoration: underline; }
+  .note-content img { max-width: 100%; border-radius: 0.5rem; }
+  .note-content input[type="checkbox"] { margin-right: 0.5rem; accent-color: #a78bfa; }
+  .note-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -68,8 +83,17 @@
     resultDiv.style.display = 'block';
 
     fetch(`/notas/nota/${noteId}/gerar-flashcards/`)
-      .then(r => r.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
+        if (data.error) {
+          listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${data.error}</div>`;
+          return;
+        }
         if (!data.flashcards || data.flashcards.length === 0) {
           listDiv.innerHTML = '<div class="alert alert-warning">Não foi possível gerar flashcards. Tente novamente.</div>';
           return;
@@ -90,7 +114,8 @@
         window.noteId = noteId;
       })
       .catch(err => {
-        listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${err.message}</div>`;
+        listDiv.innerHTML = `<div class="alert alert-danger">Erro ao gerar flashcards: ${err.message}</div>`;
+        console.error('Erro detalhado:', err);
       });
   }
 
@@ -120,26 +145,4 @@
     .catch(err => alert('Erro ao salvar: ' + err));
   }
 </script>
-=======
-<!-- Estilos para melhorar a aparência do conteúdo renderizado -->
-<style>
-  .note-content h1 { font-size: 2rem; font-weight: 700; color: #f1f5f9; margin-top: 1.5rem; margin-bottom: 0.75rem; }
-  .note-content h2 { font-size: 1.6rem; font-weight: 600; color: #e8e8f0; margin-top: 1.25rem; margin-bottom: 0.5rem; }
-  .note-content h3 { font-size: 1.3rem; font-weight: 600; color: #d0d8e8; margin-top: 1rem; margin-bottom: 0.5rem; }
-  .note-content p { color: #c0c8e0; line-height: 1.6; margin-bottom: 0.75rem; }
-  .note-content ul, .note-content ol { padding-left: 1.5rem; color: #c0c8e0; margin-bottom: 0.75rem; }
-  .note-content li { margin-bottom: 0.25rem; }
-  .note-content blockquote { border-left: 4px solid #a78bfa; padding-left: 1rem; margin: 1rem 0; color: #b0b8d0; }
-  .note-content pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.75rem; overflow-x: auto; color: #e0e8f0; }
-  .note-content code { background: rgba(255,255,255,0.05); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9rem; color: #c0c8e0; }
-  .note-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  .note-content th, .note-content td { border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem; text-align: left; color: #c0c8e0; }
-  .note-content th { background: rgba(255,255,255,0.05); }
-  .note-content a { color: #a78bfa; text-decoration: none; }
-  .note-content a:hover { text-decoration: underline; }
-  .note-content img { max-width: 100%; border-radius: 0.5rem; }
-  .note-content input[type="checkbox"] { margin-right: 0.5rem; accent-color: #a78bfa; }
-  .note-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0; }
-</style>
->>>>>>> b8f6fe6 (noite)
 {% endblock %}
