@@ -16,3 +16,4 @@ Sistema completo para organização de estudos, com foco em produtividade, revis
 6. Crie um superusuário: `python manage.py createsuperuser`
 7. Inicie o servidor: `python manage.py runserver`
  
+#### tem algumas dependecias
