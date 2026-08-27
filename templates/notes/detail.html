@@ -34,13 +34,17 @@
   {% endfor %}
 </p>
 
-<!-- Botão IA -->
-<div class="mt-4">
+<!-- BOTÕES DE IA -->
+<div class="mt-4 d-flex gap-2 flex-wrap">
   <button class="btn btn-primary" onclick="gerarFlashcards({{ note.id }})">
-    <i class="bi bi-magic me-1"></i> Gerar Flashcards com IA
+    <i class="bi bi-magic me-1"></i> Gerar Flashcards
+  </button>
+  <button class="btn btn-success" onclick="gerarQuestoes({{ note.id }})">
+    <i class="bi bi-question-circle me-1"></i> Gerar Questões
   </button>
 </div>
 
+<!-- RESULTADO DOS FLASHCARDS -->
 <div id="flashcards-result" class="mt-4" style="display: none;">
   <h5><i class="bi bi-card-checklist me-2"></i>Flashcards gerados</h5>
   <div id="flashcards-list"></div>
@@ -52,7 +56,18 @@
   </button>
 </div>
 
-<!-- Estilos para Markdown -->
+<!-- RESULTADO DAS QUESTÕES -->
+<div id="questoes-result" class="mt-4" style="display: none;">
+  <h5><i class="bi bi-question-circle me-2"></i>Questões geradas</h5>
+  <div id="questoes-list"></div>
+  <button class="btn btn-success mt-3" onclick="salvarQuestoes()">
+    <i class="bi bi-save me-1"></i> Salvar todas
+  </button>
+  <button class="btn btn-secondary mt-3 ms-2" onclick="document.getElementById('questoes-result').style.display='none'">
+    <i class="bi bi-x-circle me-1"></i> Fechar
+  </button>
+</div>
+
 <style>
   .note-content h1 { font-size: 2rem; font-weight: 700; color: #f1f5f9; margin-top: 1.5rem; margin-bottom: 0.75rem; }
   .note-content h2 { font-size: 1.6rem; font-weight: 600; color: #e8e8f0; margin-top: 1.25rem; margin-bottom: 0.5rem; }
@@ -71,11 +86,15 @@
   .note-content img { max-width: 100%; border-radius: 0.5rem; }
   .note-content input[type="checkbox"] { margin-right: 0.5rem; accent-color: #a78bfa; }
   .note-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0; }
+  .questao-card { background: rgba(255,255,255,0.03); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.06); }
+  .questao-card .alternativa { padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin: 0.1rem 0; }
+  .questao-card .alternativa.correta { background: rgba(16,185,129,0.15); border-left: 3px solid #10b981; }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  // ===== FLASHCARDS =====
   function gerarFlashcards(noteId) {
     const resultDiv = document.getElementById('flashcards-result');
     const listDiv = document.getElementById('flashcards-list');
@@ -83,17 +102,8 @@
     resultDiv.style.display = 'block';
 
     fetch(`/notas/nota/${noteId}/gerar-flashcards/`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Erro HTTP: ${response.status}`);
-        }
-        return response.json();
-      })
+      .then(r => r.json())
       .then(data => {
-        if (data.error) {
-          listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${data.error}</div>`;
-          return;
-        }
         if (!data.flashcards || data.flashcards.length === 0) {
           listDiv.innerHTML = '<div class="alert alert-warning">Não foi possível gerar flashcards. Tente novamente.</div>';
           return;
@@ -114,8 +124,7 @@
         window.noteId = noteId;
       })
       .catch(err => {
-        listDiv.innerHTML = `<div class="alert alert-danger">Erro ao gerar flashcards: ${err.message}</div>`;
-        console.error('Erro detalhado:', err);
+        listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${err.message}</div>`;
       });
   }
 
@@ -124,10 +133,11 @@
       alert('Nenhum flashcard para salvar.');
       return;
     }
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
     fetch(`/notas/nota/${window.noteId}/salvar-flashcards/`, {
       method: 'POST',
       headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
+        'X-CSRFToken': csrfToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ flashcards: window.flashcardsData })
@@ -138,6 +148,73 @@
         alert(`${data.count} flashcards salvos com sucesso!`);
         document.getElementById('flashcards-result').style.display = 'none';
         window.flashcardsData = null;
+      } else {
+        alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+      }
+    })
+    .catch(err => alert('Erro ao salvar: ' + err));
+  }
+
+  // ===== QUESTÕES =====
+  function gerarQuestoes(noteId) {
+    const resultDiv = document.getElementById('questoes-result');
+    const listDiv = document.getElementById('questoes-list');
+    listDiv.innerHTML = '<div class="spinner-border text-success" role="status"><span class="visually-hidden">Gerando...</span></div>';
+    resultDiv.style.display = 'block';
+
+    fetch(`/notas/nota/${noteId}/gerar-questoes/`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.questoes || data.questoes.length === 0) {
+          listDiv.innerHTML = '<div class="alert alert-warning">Não foi possível gerar questões. Tente novamente.</div>';
+          return;
+        }
+        let html = '';
+        data.questoes.forEach((q, i) => {
+          const alternativas = q.alternativas || {};
+          html += `
+            <div class="questao-card">
+              <p><strong>Q${i+1}:</strong> ${q.enunciado}</p>
+              <div class="ms-3">
+                <div class="alternativa ${q.correta === 'a' ? 'correta' : ''}">a) ${alternativas.a || ''}</div>
+                <div class="alternativa ${q.correta === 'b' ? 'correta' : ''}">b) ${alternativas.b || ''}</div>
+                <div class="alternativa ${q.correta === 'c' ? 'correta' : ''}">c) ${alternativas.c || ''}</div>
+                <div class="alternativa ${q.correta === 'd' ? 'correta' : ''}">d) ${alternativas.d || ''}</div>
+              </div>
+              <p class="mt-2"><strong>✅ Correta:</strong> ${q.correta}</p>
+              <p><strong>Explicação:</strong> ${q.explicacao || ''}</p>
+            </div>
+          `;
+        });
+        listDiv.innerHTML = html;
+        window.questoesData = data.questoes;
+        window.noteId = noteId;
+      })
+      .catch(err => {
+        listDiv.innerHTML = `<div class="alert alert-danger">Erro: ${err.message}</div>`;
+      });
+  }
+
+  function salvarQuestoes() {
+    if (!window.questoesData || window.questoesData.length === 0) {
+      alert('Nenhuma questão para salvar.');
+      return;
+    }
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+    fetch(`/notas/nota/${window.noteId}/salvar-questoes/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ questoes: window.questoesData })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert(`${data.count} questões salvas com sucesso!`);
+        document.getElementById('questoes-result').style.display = 'none';
+        window.questoesData = null;
       } else {
         alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
       }

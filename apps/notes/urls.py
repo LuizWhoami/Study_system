@@ -12,4 +12,6 @@ urlpatterns = [
     path('<int:pk>/autosave/', views.autosave_note, name='autosave_note'),
     path('nota/<int:note_id>/gerar-flashcards/', views.gerar_flashcards_nota, name='gerar_flashcards_nota'),
     path('nota/<int:note_id>/salvar-flashcards/', views.salvar_flashcards_nota, name='salvar_flashcards_nota'),
+    path('nota/<int:note_id>/gerar-questoes/', views.gerar_questoes_nota, name='gerar_questoes_nota'),
+    path('nota/<int:note_id>/salvar-questoes/', views.salvar_questoes_nota, name='salvar_questoes_nota'),
 ]

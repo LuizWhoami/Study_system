@@ -1,45 +1,240 @@
 {% extends 'base.html' %}
-{% block title %}Flashcards - Hoje{% endblock %}
+{% load static %}
+{% block title %}Meus Flashcards{% endblock %}
+
+{% block extra_css %}
+<style>
+  .flashcard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .stat-item:hover {
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-2px);
+  }
+  .stat-item .number {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+  }
+  .stat-item .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+  .stat-item.danger .number { color: #ef4444; }
+  .stat-item.warning .number { color: #f59e0b; }
+  .stat-item.info .number { color: #06b6d4; }
+  .stat-item.success .number { color: #10b981; }
+
+  .flashcard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .flashcard-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .flashcard-card:hover {
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+  .flashcard-card .question {
+    font-weight: 600;
+    color: #fff;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    flex: 1;
+  }
+  .flashcard-card .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+  .flashcard-card .actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .flashcard-card .actions .btn {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+  .flashcard-card.border-danger { border-color: rgba(239,68,68,0.3); }
+  .flashcard-card.border-warning { border-color: rgba(245,158,11,0.3); }
+  .flashcard-card.border-info { border-color: rgba(6,182,212,0.3); }
+  .flashcard-card.border-success { border-color: rgba(16,185,129,0.3); opacity: 0.7; }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+  .section-title i { font-size: 1.3rem; }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+  }
+  .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-card-checklist me-2"></i>Flashcards de Hoje</h2>
+  <h2><i class="bi bi-card-checklist me-2"></i>Meus Flashcards</h2>
   <a href="{% url 'flashcards:criar' %}" class="btn btn-primary">
     <i class="bi bi-plus-circle me-1"></i> Novo Flashcard
   </a>
 </div>
 
-{% if total_pendentes == 0 %}
-  <div class="alert alert-success">
-    <i class="bi bi-check-circle me-2"></i> Parabéns! Nenhum flashcard pendente para hoje.
+<!-- Estatísticas -->
+<div class="flashcard-stats">
+  <div class="stat-item">
+    <div class="number">{{ total_flashcards|default:0 }}</div>
+    <div class="label">Total</div>
   </div>
-{% else %}
-  <p class="text-muted">Você tem <strong>{{ total_pendentes }}</strong> flashcards para revisar hoje.</p>
-  
-  <div class="row g-4">
-    {% for flashcard in flashcards %}
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">{{ flashcard.pergunta|truncatewords:10 }}</h5>
-            <p class="card-text text-muted small">
-              <i class="bi bi-tag me-1"></i> {{ flashcard.topic.subject.name }} → {{ flashcard.topic.name }}
-            </p>
-            <p class="card-text">
-              <span class="badge bg-secondary">Revisões: {{ flashcard.vezes_revisado }}</span>
-              <span class="badge bg-info">Intervalo: {{ flashcard.intervalo }} dias</span>
-            </p>
-            <a href="{% url 'flashcards:revisar' flashcard.pk %}" class="btn btn-success w-100">
-              <i class="bi bi-arrow-right-circle me-1"></i> Revisar agora
-            </a>
-          </div>
+  <div class="stat-item danger">
+    <div class="number">{{ atrasados|default:0 }}</div>
+    <div class="label">Atrasados</div>
+  </div>
+  <div class="stat-item warning">
+    <div class="number">{{ hoje|default:0 }}</div>
+    <div class="label">Hoje</div>
+  </div>
+  <div class="stat-item info">
+    <div class="number">{{ proximos|default:0 }}</div>
+    <div class="label">Próximos</div>
+  </div>
+  <div class="stat-item success">
+    <div class="number">{{ concluidos|default:0 }}</div>
+    <div class="label">Concluídos</div>
+  </div>
+</div>
+
+{% if flashcards %}
+  <!-- Atrasados -->
+  {% if atrasados_list %}
+  <div class="mb-4">
+    <div class="section-title text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Atrasados</div>
+    <div class="flashcard-grid">
+      {% for flashcard in atrasados_list %}
+      <div class="flashcard-card border-danger">
+        <div class="question">{{ flashcard.pergunta }}</div>
+        <div class="meta">
+          <span>Revisões: {{ flashcard.vezes_revisado }}</span>
+          <span>🔴 {{ flashcard.proxima_revisao|timeuntil }}</span>
+        </div>
+        <div class="actions">
+          <a href="{% url 'flashcards:revisar' flashcard.pk %}" class="btn btn-danger btn-sm">Revisar agora</a>
         </div>
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Hoje -->
+  {% if hoje_list %}
+  <div class="mb-4">
+    <div class="section-title text-warning"><i class="bi bi-calendar-check"></i> Hoje</div>
+    <div class="flashcard-grid">
+      {% for flashcard in hoje_list %}
+      <div class="flashcard-card border-warning">
+        <div class="question">{{ flashcard.pergunta }}</div>
+        <div class="meta">
+          <span>Revisões: {{ flashcard.vezes_revisado }}</span>
+        </div>
+        <div class="actions">
+          <a href="{% url 'flashcards:revisar' flashcard.pk %}" class="btn btn-warning btn-sm">Revisar</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Próximos dias -->
+  {% if proximos_list %}
+  <div class="mb-4">
+    <div class="section-title text-info"><i class="bi bi-clock"></i> Próximos dias</div>
+    <div class="flashcard-grid">
+      {% for flashcard in proximos_list %}
+      <div class="flashcard-card border-info">
+        <div class="question">{{ flashcard.pergunta }}</div>
+        <div class="meta">
+          <span>Revisões: {{ flashcard.vezes_revisado }}</span>
+          <span>📅 {{ flashcard.proxima_revisao|timeuntil }}</span>
+        </div>
+        <div class="actions">
+          <a href="{% url 'flashcards:revisar' flashcard.pk %}" class="btn btn-outline-info btn-sm">Ver</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Concluídos (revisados hoje) -->
+  {% if concluidos_list %}
+  <div class="mb-4">
+    <div class="section-title text-success"><i class="bi bi-check-circle"></i> Revisados hoje</div>
+    <div class="flashcard-grid">
+      {% for flashcard in concluidos_list %}
+      <div class="flashcard-card border-success">
+        <div class="question">{{ flashcard.pergunta }}</div>
+        <div class="meta">
+          <span>✅ Concluído</span>
+        </div>
+        <div class="actions">
+          <span class="badge bg-success">Feito</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-card-checklist"></i>
+    <p>Nenhum flashcard cadastrado ainda.</p>
+    <a href="{% url 'flashcards:criar' %}" class="btn btn-primary mt-2">Criar seu primeiro flashcard</a>
   </div>
 {% endif %}
 
-<a href="{% url 'flashcards:estatisticas' %}" class="btn btn-secondary mt-3">
-  <i class="bi bi-bar-chart me-1"></i> Ver estatísticas
-</a>
+<div class="mt-4">
+  <a href="{% url 'flashcards:estatisticas' %}" class="btn btn-secondary">
+    <i class="bi bi-bar-chart me-1"></i> Estatísticas
+  </a>
+</div>
 {% endblock %}

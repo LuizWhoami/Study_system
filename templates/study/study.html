@@ -72,7 +72,7 @@
   }
   .custom-modal {
     background: #1a1a2e;
-    border: 1px solid #2d2d44;
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     color: #e8e8f0;
     max-width: 500px;
@@ -202,11 +202,7 @@
 {% block extra_js %}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    let timerInterval = null;
-    let seconds = 0;
-    let sessionId = null;
-    let selectedAssuntoName = '';
-
+    // ===== ELEMENTOS =====
     const display = document.getElementById('timer-display');
     const startBtn = document.getElementById('start-btn');
     const pauseBtn = document.getElementById('pause-btn');
@@ -222,6 +218,120 @@
     const confirmBtn = document.getElementById('confirm-study-btn');
     const cancelBtn = document.getElementById('cancel-modal-btn');
 
+    // ===== ESTADO (localStorage) =====
+    let timerInterval = null;
+    let totalSeconds = parseFloat(localStorage.getItem('study_total_seconds') || '0');
+    let isRunning = localStorage.getItem('study_is_running') === 'true';
+    let sessionId = localStorage.getItem('study_session_id') || null;
+    let selectedAssuntoName = localStorage.getItem('study_topic_name') || '';
+
+    // ===== FUNÇÕES =====
+    function formatTime(s) {
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(Math.floor(s % 60)).padStart(2, '0');
+      return `${h}:${m}:${sec}`;
+    }
+
+    function updateDisplay() {
+      display.textContent = formatTime(totalSeconds);
+      sessionTimer.textContent = `Sessão: ${Math.floor(totalSeconds / 60)} min`;
+    }
+
+    function saveState() {
+      localStorage.setItem('study_total_seconds', totalSeconds);
+      localStorage.setItem('study_is_running', isRunning);
+      if (sessionId) localStorage.setItem('study_session_id', sessionId);
+      if (selectedAssuntoName) localStorage.setItem('study_topic_name', selectedAssuntoName);
+    }
+
+    function clearState() {
+      localStorage.removeItem('study_total_seconds');
+      localStorage.removeItem('study_is_running');
+      localStorage.removeItem('study_session_id');
+      localStorage.removeItem('study_topic_name');
+      totalSeconds = 0;
+      sessionId = null;
+      selectedAssuntoName = '';
+      isRunning = false;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      clearState();
+      updateDisplay();
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      endBtn.disabled = true;
+      pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+      currentInfo.innerHTML = `<span class="text-muted">Nenhum estudo em andamento</span>`;
+      assuntoNameEl.textContent = 'Assunto: --';
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      isRunning = true;
+      saveState();
+      timerInterval = setInterval(() => {
+        totalSeconds++;
+        updateDisplay();
+        saveState();
+      }, 1000);
+      updateDisplay();
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      endBtn.disabled = false;
+      pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+    }
+
+    function pauseTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isRunning = false;
+        saveState();
+        updateDisplay();
+        pauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Continuar';
+      } else {
+        // Continuar
+        isRunning = true;
+        saveState();
+        timerInterval = setInterval(() => {
+          totalSeconds++;
+          updateDisplay();
+          saveState();
+        }, 1000);
+        pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+        updateDisplay();
+      }
+    }
+
+    function restoreState() {
+      if (sessionId && selectedAssuntoName) {
+        currentInfo.innerHTML = `<strong>Estudando:</strong> ${selectedAssuntoName}`;
+        assuntoNameEl.textContent = `Assunto: ${selectedAssuntoName}`;
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        endBtn.disabled = false;
+        updateDisplay();
+
+        if (isRunning) {
+          timerInterval = setInterval(() => {
+            totalSeconds++;
+            updateDisplay();
+            saveState();
+          }, 1000);
+          pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
+        } else {
+          pauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Continuar';
+        }
+      } else {
+        resetTimer();
+      }
+    }
+
+    // ===== MODAL =====
     function openModal() {
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -238,6 +348,7 @@
       document.body.style.overflow = '';
     }
 
+    // ===== EVENTOS =====
     startBtn.addEventListener('click', openModal);
     cancelBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', function(e) {
@@ -316,18 +427,16 @@
       .then(r => r.json())
       .then(data => {
         sessionId = data.session_id;
+        localStorage.setItem('study_session_id', sessionId);
+        localStorage.setItem('study_topic_name', selectedAssuntoName);
+
         currentInfo.innerHTML = `<strong>Estudando:</strong> ${selectedAssuntoName}`;
         assuntoNameEl.textContent = `Assunto: ${selectedAssuntoName}`;
-        if (timerInterval) clearInterval(timerInterval);
-        seconds = 0;
-        updateDisplay();
-        timerInterval = setInterval(() => {
-          seconds++;
-          updateDisplay();
-        }, 1000);
-        startBtn.disabled = true;
-        pauseBtn.disabled = false;
-        endBtn.disabled = false;
+
+        totalSeconds = 0;
+        isRunning = true;
+        saveState();
+        startTimer();
       })
       .catch(err => {
         console.error('Erro ao iniciar sessão:', err);
@@ -336,49 +445,18 @@
       });
     });
 
-    function formatTime(s) {
-      const h = String(Math.floor(s / 3600)).padStart(2, '0');
-      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-      const sec = String(s % 60).padStart(2, '0');
-      return `${h}:${m}:${sec}`;
-    }
+    // ===== PAUSAR / CONTINUAR =====
+    pauseBtn.addEventListener('click', pauseTimer);
 
-    function updateDisplay() {
-      display.textContent = formatTime(seconds);
-      sessionTimer.textContent = `Sessão: ${Math.floor(seconds / 60)} min`;
-    }
-
-    pauseBtn.addEventListener('click', function() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-        pauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Continuar';
-      } else {
-        timerInterval = setInterval(() => {
-          seconds++;
-          updateDisplay();
-        }, 1000);
-        pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
-      }
-    });
-
+    // ===== FINALIZAR =====
     endBtn.addEventListener('click', function() {
       if (timerInterval) clearInterval(timerInterval);
+      if (!sessionId) { resetTimer(); return; }
 
-      if (!sessionId) {
-        resetTimer();
-        return;
-      }
-
-      const durationMinutes = Math.floor(seconds / 60);
+      const durationMinutes = Math.floor(totalSeconds / 60);
       if (durationMinutes < 1) {
         if (!confirm('Você estudou menos de 1 minuto. Deseja registrar mesmo assim?')) {
-          if (!timerInterval) {
-            timerInterval = setInterval(() => {
-              seconds++;
-              updateDisplay();
-            }, 1000);
-          }
+          if (isRunning) startTimer();
           return;
         }
       }
@@ -394,14 +472,12 @@
           duration_minutes: durationMinutes
         })
       })
-      .then(response => {
-        if (!response.ok) throw new Error('Erro na resposta do servidor');
-        return response.json();
-      })
+      .then(r => r.json())
       .then(data => {
         if (data.success) {
-          alert(`✅ Sessão finalizada! ${data.duration} minutos registrados.`);
+          alert(`✅ Sessão finalizada! ${durationMinutes} minutos registrados.`);
           resetTimer();
+          clearState();
           currentInfo.innerHTML = `<span class="text-muted">Nenhum estudo em andamento</span>`;
           assuntoNameEl.textContent = 'Assunto: --';
         } else {
@@ -411,27 +487,12 @@
       .catch(err => {
         console.error('Erro ao finalizar sessão:', err);
         alert('❌ Erro ao finalizar sessão. Tente novamente.');
-        if (!timerInterval) {
-          timerInterval = setInterval(() => {
-            seconds++;
-            updateDisplay();
-          }, 1000);
-        }
+        if (isRunning) startTimer();
       });
     });
 
-    function resetTimer() {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      seconds = 0;
-      updateDisplay();
-      startBtn.disabled = false;
-      pauseBtn.disabled = true;
-      endBtn.disabled = true;
-      pauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar';
-      sessionId = null;
-      selectedAssuntoName = '';
-    }
+    // ===== INICIALIZAÇÃO =====
+    restoreState();
   });
 </script>
 {% endblock %}

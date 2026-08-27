@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronômetro - LS Study</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(145deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #f1f5f9;
+        }
+        .popup-container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 25px 50px -10px rgba(0,0,0,0.6);
+            min-width: 320px;
+            position: relative;
+        }
+        .timer-display {
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: #7c8cff;
+            letter-spacing: 0.05em;
+            font-family: 'Inter', monospace;
+            background: rgba(255,255,255,0.05);
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(124, 140, 255, 0.2);
+            margin: 1rem 0;
+        }
+        .study-info {
+            font-size: 1.2rem;
+            color: #c0c8e0;
+            margin-bottom: 1rem;
+        }
+        .study-info .badge {
+            background: rgba(124, 140, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+        }
+        .btn {
+            border: none;
+            border-radius: 1.5rem;
+            padding: 0.7rem 1.8rem;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            margin: 0.3rem;
+        }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .btn-success:hover { transform: scale(1.03); box-shadow: 0 8px 20px -8px rgba(16,185,129,0.5); }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+        .btn-warning:hover { transform: scale(1.03); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+        .btn-danger:hover { transform: scale(1.03); }
+        .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #c0c8e0; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        .close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 1.5rem; cursor: pointer; }
+        .close-btn:hover { color: #f1f5f9; }
+        .status-text { margin-top: 1rem; font-size: 0.8rem; color: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <div class="popup-container">
+        <button class="close-btn" onclick="window.close()">✕</button>
+        <h2 style="font-weight: 300; color: rgba(255,255,255,0.4);">⏱️ Cronômetro</h2>
+        <div class="study-info" id="popup-assunto">
+            <span class="badge">Assunto: --</span>
+        </div>
+        <div class="timer-display" id="popup-timer">00:00:00</div>
+        <div class="study-buttons">
+            <button class="btn btn-success" id="popup-start" disabled>▶ Iniciar</button>
+            <button class="btn btn-warning" id="popup-pause" disabled>⏸ Pausar</button>
+            <button class="btn btn-danger" id="popup-end" disabled>⏹ Finalizar</button>
+        </div>
+        <div class="status-text">Esta janela fica sempre ativa mesmo se você navegar.</div>
+    </div>
+
+    <script>
+        (function() {
+            const display = document.getElementById('popup-timer');
+            const startBtn = document.getElementById('popup-start');
+            const pauseBtn = document.getElementById('popup-pause');
+            const endBtn = document.getElementById('popup-end');
+            const assuntoEl = document.getElementById('popup-assunto');
+
+            let timerInterval = null;
+            let totalSeconds = parseFloat(localStorage.getItem('study_total_seconds') || '0');
+            let lastStartTime = parseInt(localStorage.getItem('study_last_start_time') || '0');
+            let isRunning = localStorage.getItem('study_is_running') === 'true';
+            let sessionId = localStorage.getItem('study_session_id') || null;
+            let topicName = localStorage.getItem('study_topic_name') || '';
+
+            function getCurrentTotalSeconds() {
+                if (lastStartTime === 0) return totalSeconds;
+                return totalSeconds + (Date.now() - lastStartTime) / 1000;
+            }
+
+            function formatTime(s) {
+                const h = String(Math.floor(s / 3600)).padStart(2, '0');
+                const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                const sec = String(Math.floor(s % 60)).padStart(2, '0');
+                return `${h}:${m}:${sec}`;
+            }
+
+            function updateDisplay() {
+                const total = getCurrentTotalSeconds();
+                display.textContent = formatTime(total);
+            }
+
+            function saveState() {
+                localStorage.setItem('study_total_seconds', totalSeconds);
+                localStorage.setItem('study_last_start_time', lastStartTime);
+                localStorage.setItem('study_is_running', isRunning);
+                if (sessionId) localStorage.setItem('study_session_id', sessionId);
+                if (topicName) localStorage.setItem('study_topic_name', topicName);
+            }
+
+            function clearState() {
+                localStorage.removeItem('study_total_seconds');
+                localStorage.removeItem('study_last_start_time');
+                localStorage.removeItem('study_is_running');
+                localStorage.removeItem('study_session_id');
+                localStorage.removeItem('study_topic_name');
+                totalSeconds = 0;
+                lastStartTime = 0;
+                sessionId = null;
+                topicName = '';
+                isRunning = false;
+            }
+
+            function resetTimer() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                clearState();
+                updateDisplay();
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                endBtn.disabled = true;
+                pauseBtn.innerHTML = '⏸ Pausar';
+                assuntoEl.innerHTML = '<span class="badge">Assunto: --</span>';
+            }
+
+            function startTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                lastStartTime = Date.now();
+                isRunning = true;
+                saveState();
+                timerInterval = setInterval(updateDisplay, 500);
+                updateDisplay();
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                endBtn.disabled = false;
+                pauseBtn.innerHTML = '⏸ Pausar';
+            }
+
+            function pauseTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    totalSeconds = getCurrentTotalSeconds();
+                    lastStartTime = 0;
+                    isRunning = false;
+                    saveState();
+                    updateDisplay();
+                    pauseBtn.innerHTML = '▶ Continuar';
+                } else {
+                    lastStartTime = Date.now();
+                    isRunning = true;
+                    saveState();
+                    timerInterval = setInterval(updateDisplay, 500);
+                    pauseBtn.innerHTML = '⏸ Pausar';
+                    updateDisplay();
+                }
+            }
+
+            function restoreState() {
+                if (sessionId && topicName) {
+                    assuntoEl.innerHTML = `<span class="badge">Assunto: ${topicName}</span>`;
+                    startBtn.disabled = true;
+                    pauseBtn.disabled = false;
+                    endBtn.disabled = false;
+                    updateDisplay();
+                    if (isRunning) {
+                        lastStartTime = Date.now();
+                        saveState();
+                        timerInterval = setInterval(updateDisplay, 500);
+                        pauseBtn.innerHTML = '⏸ Pausar';
+                    } else {
+                        pauseBtn.innerHTML = '▶ Continuar';
+                    }
+                } else {
+                    resetTimer();
+                }
+            }
+
+            // Eventos
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            endBtn.addEventListener('click', function() {
+                if (timerInterval) clearInterval(timerInterval);
+                if (!sessionId) { resetTimer(); return; }
+                const durationMinutes = Math.floor(getCurrentTotalSeconds() / 60);
+                if (durationMinutes < 1 && !confirm('Menos de 1 minuto. Deseja registrar?')) {
+                    if (isRunning) startTimer();
+                    return;
+                }
+                fetch("{% url 'study:end_session' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ session_id: sessionId, duration_minutes: durationMinutes })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Sessão finalizada!');
+                        resetTimer();
+                        clearState();
+                        window.close();
+                    } else throw new Error(data.error);
+                })
+                .catch(err => {
+                    alert('❌ Erro ao finalizar: ' + err.message);
+                    if (isRunning) startTimer();
+                });
+            });
+
+            // Sincroniza com outras abas (storage event)
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'study_is_running' || e.key === 'study_total_seconds' || e.key === 'study_last_start_time' ||
+                    e.key === 'study_session_id' || e.key === 'study_topic_name') {
+                    totalSeconds = parseFloat(localStorage.getItem('study_total_seconds') || '0');
+                    lastStartTime = parseInt(localStorage.getItem('study_last_start_time') || '0');
+                    isRunning = localStorage.getItem('study_is_running') === 'true';
+                    sessionId = localStorage.getItem('study_session_id') || null;
+                    topicName = localStorage.getItem('study_topic_name') || '';
+                    updateDisplay();
+                    if (sessionId && topicName) {
+                        assuntoEl.innerHTML = `<span class="badge">Assunto: ${topicName}</span>`;
+                        startBtn.disabled = true;
+                        pauseBtn.disabled = false;
+                        endBtn.disabled = false;
+                        if (isRunning) {
+                            if (!timerInterval) {
+                                timerInterval = setInterval(updateDisplay, 500);
+                            }
+                            pauseBtn.innerHTML = '⏸ Pausar';
+                        } else {
+                            if (timerInterval) {
+                                clearInterval(timerInterval);
+                                timerInterval = null;
+                            }
+                            pauseBtn.innerHTML = '▶ Continuar';
+                        }
+                    } else {
+                        resetTimer();
+                    }
+                }
+            });
+
+            restoreState();
+        })();
+    </script>
+</body>
+</html>

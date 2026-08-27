@@ -12,7 +12,7 @@ class Question(models.Model):
     ]
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='questions', verbose_name="Usuário")
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='questions', verbose_name="Assunto")
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name='questions', verbose_name="Assunto")
     enunciado = models.TextField(verbose_name="Enunciado")
     alternativa_a = models.CharField(max_length=500, verbose_name="Alternativa A", default='')
     alternativa_b = models.CharField(max_length=500, verbose_name="Alternativa B", default='')
@@ -39,3 +39,17 @@ class Question(models.Model):
             'c': self.alternativa_c,
             'd': self.alternativa_d,
         }
+
+    def get_correta_letra(self):
+        """Retorna a letra da alternativa correta (a, b, c, d)"""
+        return self.alternativa_correta
+
+    def get_correta_texto(self):
+        """Retorna o texto da alternativa correta"""
+        alternativas = {
+            'a': self.alternativa_a,
+            'b': self.alternativa_b,
+            'c': self.alternativa_c,
+            'd': self.alternativa_d,
+        }
+        return alternativas.get(self.alternativa_correta, '')

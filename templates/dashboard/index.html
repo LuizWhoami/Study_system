@@ -3,16 +3,25 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+<!-- Hero -->
+<div class="hero-section">
+  <h1>Bem-vindo(a), {{ user.username }} 👋</h1>
+  <p>Organize, estude e conquiste seus objetivos com foco e consistência.</p>
+  <a href="{% url 'study:study' %}" class="btn btn-primary">
+    <i class="bi bi-play-fill"></i> Começar agora
+  </a>
+</div>
+
+<!-- Stats Cards -->
 <div class="row g-4">
-  <!-- Cards -->
   <div class="col-md-3 col-sm-6">
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="card-title">Hoje</h5>
+          <h6 class="card-title">Hoje</h6>
           <i class="bi bi-clock-history fs-3 text-primary"></i>
         </div>
-        <p class="display-6 fw-bold">{{ hours_today }}h</p>
+        <p class="display-6">{{ hours_today }}h</p>
         <small class="text-muted">Meta: {{ daily_goal_hours }}h</small>
       </div>
     </div>
@@ -22,10 +31,10 @@
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="card-title">Semana</h5>
+          <h6 class="card-title">Semana</h6>
           <i class="bi bi-calendar-week fs-3 text-success"></i>
         </div>
-        <p class="display-6 fw-bold">{{ hours_week }}h</p>
+        <p class="display-6">{{ hours_week }}h</p>
         <small class="text-muted">Últimos 7 dias</small>
       </div>
     </div>
@@ -35,10 +44,10 @@
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="card-title">Mês</h5>
+          <h6 class="card-title">Mês</h6>
           <i class="bi bi-calendar-month fs-3 text-warning"></i>
         </div>
-        <p class="display-6 fw-bold">{{ hours_month }}h</p>
+        <p class="display-6">{{ hours_month }}h</p>
         <small class="text-muted">Últimos 30 dias</small>
       </div>
     </div>
@@ -48,16 +57,17 @@
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="card-title">Questões</h5>
+          <h6 class="card-title">Questões</h6>
           <i class="bi bi-check2-circle fs-3 text-info"></i>
         </div>
-        <p class="display-6 fw-bold">{{ questions_today }}</p>
+        <p class="display-6">{{ questions_today }}</p>
         <small class="text-muted">Acertos: {{ accuracy }}%</small>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Progresso e Sessões -->
 <div class="row g-4 mt-2">
   <div class="col-md-6">
     <div class="card h-100">
@@ -93,7 +103,7 @@
   </div>
 </div>
 
-<!-- NOVA SEÇÃO: PLANEJAMENTO DA SEMANA (CALENDÁRIO) -->
+<!-- Planejamento da Semana -->
 <div class="row mt-4">
   <div class="col-12">
     <div class="card">
@@ -106,20 +116,19 @@
           <div class="row g-2">
             {% for day in week_plan %}
               <div class="col text-center">
-                <div class="p-2 rounded {% if day.is_today %}bg-primary bg-opacity-25 border border-primary{% endif %}" 
-                     style="background: rgba(255,255,255,0.03);">
+                <div class="p-2 rounded {% if day.is_today %}border border-primary{% endif %}" style="background:rgba(255,255,255,0.02);">
                   <div class="small text-muted">{{ day.day_name }}</div>
                   <div class="mt-1">
                     {% if day.activity == 'study' %}
-                      <span class="badge bg-primary" style="font-size:0.8rem;">📚 Estudo</span>
+                      <span class="badge bg-primary">📚 Estudo</span>
                     {% elif day.activity == 'review' %}
-                      <span class="badge bg-warning text-dark" style="font-size:0.8rem;">🔄 Revisão</span>
+                      <span class="badge bg-warning text-dark">🔄 Revisão</span>
                     {% elif day.activity == 'questions' %}
-                      <span class="badge bg-info" style="font-size:0.8rem;">❓ Questões</span>
+                      <span class="badge bg-info">❓ Questões</span>
                     {% elif day.activity == 'summary' %}
-                      <span class="badge bg-secondary" style="font-size:0.8rem;">📝 Resumo</span>
+                      <span class="badge bg-secondary">📝 Resumo</span>
                     {% elif day.activity == 'rest' %}
-                      <span class="badge bg-dark" style="font-size:0.8rem;">😴 Descanso</span>
+                      <span class="badge bg-dark">😴 Descanso</span>
                     {% else %}
                       <span class="text-muted" style="font-size:0.7rem;">—</span>
                     {% endif %}
@@ -131,17 +140,17 @@
           <div class="row mt-3">
             <div class="col-12">
               <small class="text-muted">
-                📚 Estudo: {{ activities_count.study }} | 
-                🔄 Revisão: {{ activities_count.review }} | 
-                ❓ Questões: {{ activities_count.questions }} | 
-                📝 Resumo: {{ activities_count.summary }} | 
+                📚 Estudo: {{ activities_count.study }} |
+                🔄 Revisão: {{ activities_count.review }} |
+                ❓ Questões: {{ activities_count.questions }} |
+                📝 Resumo: {{ activities_count.summary }} |
                 😴 Descanso: {{ activities_count.rest }}
               </small>
             </div>
           </div>
         {% else %}
           <p class="text-muted text-center my-3">
-            Nenhum planejamento para esta semana. 
+            Nenhum planejamento para esta semana.
             <a href="{% url 'calendar:calendar' %}">Clique aqui para planejar seus dias.</a>
           </p>
         {% endif %}
@@ -155,7 +164,7 @@
   <div class="col-12">
     <div class="card">
       <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes (próximos 3 dias)</h5>
+        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes</h5>
       </div>
       <div class="card-body" id="pending-reviews-list">
         <div class="text-center text-muted">Carregando...</div>
@@ -164,11 +173,11 @@
   </div>
 </div>
 
-<!-- Botão para Visão Geral -->
+<!-- Visão Geral -->
 <div class="row mt-4">
   <div class="col-12 text-center">
     <a href="{% url 'contests:general' %}" class="btn btn-primary btn-lg">
-      <i class="bi bi-globe2 me-2"></i> Ver Visão Geral de Todos os Estudos
+      <i class="bi bi-globe2 me-2"></i> Ver Visão Geral
     </a>
   </div>
 </div>

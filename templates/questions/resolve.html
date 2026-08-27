@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Resolver Questão{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h4><i class="bi bi-question-circle me-2"></i>Resolva a Questão</h4>
+      </div>
+      <div class="card-body">
+        <h5>{{ question.enunciado }}</h5>
+        <form method="post" id="resolve-form">
+          {% csrf_token %}
+          <div class="mt-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="resposta" id="a" value="a">
+              <label class="form-check-label" for="a">a) {{ question.alternativa_a }}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="resposta" id="b" value="b">
+              <label class="form-check-label" for="b">b) {{ question.alternativa_b }}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="resposta" id="c" value="c">
+              <label class="form-check-label" for="c">c) {{ question.alternativa_c }}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="resposta" id="d" value="d">
+              <label class="form-check-label" for="d">d) {{ question.alternativa_d }}</label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3">Confirmar resposta</button>
+          <a href="{% url 'questions:list' %}" class="btn btn-secondary mt-3">Cancelar</a>
+        </form>
+
+        <!-- Resultado -->
+        {% if resultado %}
+          <div class="mt-4 alert {% if acertou %}alert-success{% else %}alert-danger{% endif %}">
+            <h5>{% if acertou %}✅ Você acertou!{% else %}❌ Você errou!{% endif %}</h5>
+            <p><strong>Sua resposta:</strong> {{ resposta_usuario }}</p>
+            <p><strong>Resposta correta:</strong> {{ question.get_alternativa_correta_display }}</p>
+            <p><strong>Explicação:</strong> {{ question.explicacao }}</p>
+            <a href="{% url 'questions:list' %}" class="btn btn-primary mt-2">Voltar para lista</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

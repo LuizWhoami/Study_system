@@ -22,10 +22,15 @@
               </span>
             </div>
             <p class="card-text text-muted small">
-              <i class="bi bi-tag me-1"></i> {{ question.topic.subject.contest.name }} → {{ question.topic.subject.name }} → {{ question.topic.name }}
+              <i class="bi bi-tag me-1"></i> 
+              {% if question.topic %}
+                {{ question.topic.subject.contest.name }} → {{ question.topic.subject.name }} → {{ question.topic.name }}
+              {% else %}
+                Sem tópico
+              {% endif %}
             </p>
             <p class="card-text">
-              <small><strong>Correta:</strong> {{ question.get_alternativa_correta_display }}</small>
+              <small><strong>Correta:</strong> {{ question.alternativa_correta|upper }}</small>
             </p>
             <div class="d-flex justify-content-between mt-3">
               <a href="{% url 'questions:update' question.pk %}" class="btn btn-sm btn-outline-secondary">
@@ -33,6 +38,9 @@
               </a>
               <a href="{% url 'questions:delete' question.pk %}" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash"></i> Excluir
+              </a>
+              <a href="{% url 'questions:resolve' question.pk %}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-check-circle"></i> Resolver
               </a>
             </div>
           </div>
