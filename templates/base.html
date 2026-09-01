@@ -108,7 +108,7 @@
       <a href="{% url 'flashcards:listar' %}" class="{% if 'flashcards' in request.resolver_match.app_name %}active{% endif %}">
         <i class="bi bi-card-checklist"></i> Flashcards
       </a>
-      <a href="{% url 'questions:list' %}" class="{% if 'questions' in request.resolver_match.app_name %}active{% endif %}">
+      <a href="{% url 'questions:bank' %}" class="{% if 'questions' in request.resolver_match.app_name %}active{% endif %}">
         <i class="bi bi-question-circle"></i> Questões
       </a>
       <a href="{% url 'calendar:calendar' %}" class="{% if 'calendar' in request.resolver_match.app_name %}active{% endif %}">

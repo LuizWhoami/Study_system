@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Banco de Questões{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="text-light"><i class="bi bi-database me-2"></i>Banco de Questões</h2>
+  <div>
+    <a href="{% url 'questions:create' %}" class="btn btn-primary me-2">
+      <i class="bi bi-plus-circle me-1"></i> Nova Questão
+    </a>
+    <a href="{% url 'questions:import' %}" class="btn btn-secondary">
+      <i class="bi bi-upload me-1"></i> Importar
+    </a>
+  </div>
+</div>
+
+<!-- Filtros (fundo escuro) -->
+<div class="card bg-dark text-light border-secondary mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label text-light">Matéria</label>
+        <select name="subject" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todas</option>
+          {% for subject in subjects %}
+            <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:'s' %}selected{% endif %}>{{ subject.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label text-light">Tópico</label>
+        <select name="topic" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todos</option>
+          {% for topic in topics %}
+            <option value="{{ topic.id }}" {% if request.GET.topic == topic.id|stringformat:'s' %}selected{% endif %}>{{ topic.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-light">Dificuldade</label>
+        <select name="dificuldade" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todas</option>
+          {% for key, value in difficulties %}
+            <option value="{{ key }}" {% if request.GET.dificuldade == key|stringformat:'s' %}selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-light">Status</label>
+        <select name="status" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todos</option>
+          <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Ativas</option>
+          <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inativas</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-light">Busca</label>
+        <input type="text" name="search" class="form-control bg-dark text-light border-secondary" placeholder="Palavra-chave" value="{{ request.GET.search|default:'' }}">
+      </div>
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{% url 'questions:bank' %}" class="btn btn-secondary">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabela (fundo escuro) -->
+<div class="table-responsive">
+  <table class="table table-dark table-hover align-middle border-secondary">
+    <thead>
+      <tr>
+        <th scope="col">ID</th>
+        <th scope="col">Enunciado</th>
+        <th scope="col">Matéria</th>
+        <th scope="col">Dificuldade</th>
+        <th scope="col">Status</th>
+        <th scope="col" class="text-center">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for question in questions %}
+      <tr>
+        <td>{{ question.id }}</td>
+        <td>{{ question.enunciado|truncatewords:10 }}</td>
+        <td>{{ question.topic.subject.name|default:"—" }}</td>
+        <td>
+          <span class="badge bg-{% if question.dificuldade <= 2 %}success{% elif question.dificuldade == 3 %}warning{% else %}danger{% endif %}">
+            {{ question.get_dificuldade_display }}
+          </span>
+        </td>
+        <td>
+          {% if question.status %}
+            <span class="badge bg-success">Ativa</span>
+          {% else %}
+            <span class="badge bg-secondary">Inativa</span>
+          {% endif %}
+        </td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm" role="group">
+            <a href="{% url 'questions:resolve' question.pk %}" class="btn btn-outline-primary" title="Resolver">
+              <i class="bi bi-play-fill"></i>
+            </a>
+            <a href="{% url 'questions:update' question.pk %}" class="btn btn-outline-secondary" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="{% url 'questions:delete' question.pk %}" class="btn btn-outline-danger" title="Excluir">
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center text-secondary py-4">
+          Nenhuma questão encontrada.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Paginação escura -->
+{% if is_paginated %}
+<nav aria-label="Navegação de páginas" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link bg-dark text-light border-secondary" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&laquo;</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link bg-dark text-light border-secondary" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Anterior</a>
+      </li>
+    {% endif %}
+
+    <li class="page-item active">
+      <span class="page-link bg-primary border-primary">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    </li>
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link bg-dark text-light border-secondary" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Próxima</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link bg-dark text-light border-secondary" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&raquo;</a>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

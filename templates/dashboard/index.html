@@ -88,14 +88,14 @@
     <div class="card h-100">
       <div class="card-body">
         <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Últimas Sessões</h5>
-        <ul class="list-group list-group-flush">
+        <ul class="questions:bank-group questions:bank-group-flush">
           {% for session in last_sessions %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <li class="questions:bank-group-item d-flex justify-content-between align-items-center">
               <span><i class="bi bi-file-text me-2"></i>{{ session.topic.name|default:"Sem tópico" }}</span>
               <span class="badge bg-primary rounded-pill">{{ session.duration_minutes }} min</span>
             </li>
           {% empty %}
-            <li class="list-group-item text-muted">Nenhuma sessão registrada.</li>
+            <li class="questions:bank-group-item text-muted">Nenhuma sessão registrada.</li>
           {% endfor %}
         </ul>
       </div>
@@ -166,7 +166,7 @@
       <div class="card-header">
         <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes</h5>
       </div>
-      <div class="card-body" id="pending-reviews-list">
+      <div class="card-body" id="pending-reviews-questions:bank">
         <div class="text-center text-muted">Carregando...</div>
       </div>
     </div>
@@ -187,19 +187,19 @@
     fetch('/estudo/pending-reviews/')
       .then(r => r.json())
       .then(data => {
-        const container = document.getElementById('pending-reviews-list');
+        const container = document.getElementById('pending-reviews-questions:bank');
         if (data.length === 0) {
           container.innerHTML = '<div class="alert alert-success">🎉 Nenhuma revisão pendente nos próximos 3 dias!</div>';
           return;
         }
-        let html = '<div class="list-group">';
+        let html = '<div class="questions:bank-group">';
         data.forEach(item => {
           const days = item.days_until;
           let badgeClass = 'bg-success';
           if (days <= 0) badgeClass = 'bg-danger';
           else if (days === 1) badgeClass = 'bg-warning text-dark';
           html += `
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="questions:bank-group-item d-flex justify-content-between align-items-center">
               <div>
                 <strong>${item.topic}</strong>
                 <span class="text-muted ms-2">(${item.subject})</span>
@@ -215,7 +215,7 @@
         container.innerHTML = html;
       })
       .catch(err => {
-        document.getElementById('pending-reviews-list').innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
+        document.getElementById('pending-reviews-questions:bank').innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
         console.error(err);
       });
   });

@@ -1,47 +1,64 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Resolver Questão{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8">
-    <div class="card">
+    <div class="card bg-dark text-light border-secondary">
       <div class="card-header">
         <h4><i class="bi bi-question-circle me-2"></i>Resolva a Questão</h4>
       </div>
       <div class="card-body">
-        <h5>{{ question.enunciado }}</h5>
+        <h5 class="text-light">{{ question.enunciado }}</h5>
+
         <form method="post" id="resolve-form">
           {% csrf_token %}
           <div class="mt-3">
             <div class="form-check">
               <input class="form-check-input" type="radio" name="resposta" id="a" value="a">
-              <label class="form-check-label" for="a">a) {{ question.alternativa_a }}</label>
+              <label class="form-check-label text-light" for="a">a) {{ question.alternativa_a }}</label>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="radio" name="resposta" id="b" value="b">
-              <label class="form-check-label" for="b">b) {{ question.alternativa_b }}</label>
+              <label class="form-check-label text-light" for="b">b) {{ question.alternativa_b }}</label>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="radio" name="resposta" id="c" value="c">
-              <label class="form-check-label" for="c">c) {{ question.alternativa_c }}</label>
+              <label class="form-check-label text-light" for="c">c) {{ question.alternativa_c }}</label>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="radio" name="resposta" id="d" value="d">
-              <label class="form-check-label" for="d">d) {{ question.alternativa_d }}</label>
+              <label class="form-check-label text-light" for="d">d) {{ question.alternativa_d }}</label>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary mt-3">Confirmar resposta</button>
-          <a href="{% url 'questions:list' %}" class="btn btn-secondary mt-3">Cancelar</a>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary" id="confirm-btn">
+              <i class="bi bi-check2-circle me-1"></i> Confirmar resposta
+            </button>
+            <a href="{% url 'questions:bank' %}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left me-1"></i> Voltar
+            </a>
+          </div>
         </form>
 
-        <!-- Resultado -->
+        <!-- Resultado (aparece após enviar) -->
         {% if resultado %}
-          <div class="mt-4 alert {% if acertou %}alert-success{% else %}alert-danger{% endif %}">
-            <h5>{% if acertou %}✅ Você acertou!{% else %}❌ Você errou!{% endif %}</h5>
-            <p><strong>Sua resposta:</strong> {{ resposta_usuario }}</p>
+          <div class="mt-4 p-3 rounded {% if acertou %}bg-success bg-opacity-25 border border-success{% else %}bg-danger bg-opacity-25 border border-danger{% endif %}">
+            <h5 class="{% if acertou %}text-success{% else %}text-danger{% endif %}">
+              {% if acertou %}
+                <i class="bi bi-check-circle-fill me-1"></i> Você acertou! 🎉
+              {% else %}
+                <i class="bi bi-x-circle-fill me-1"></i> Você errou! 😔
+              {% endif %}
+            </h5>
             <p><strong>Resposta correta:</strong> {{ question.get_alternativa_correta_display }}</p>
-            <p><strong>Explicação:</strong> {{ question.explicacao }}</p>
-            <a href="{% url 'questions:list' %}" class="btn btn-primary mt-2">Voltar para lista</a>
+            <p><strong>Explicação:</strong> {{ question.explicacao|default:"Nenhuma explicação disponível." }}</p>
+            <div class="mt-2">
+              <a href="{% url 'questions:bank' %}" class="btn btn-secondary btn-sm">Voltar para o banco</a>
+              <a href="{% url 'questions:resolve' question.pk %}" class="btn btn-primary btn-sm">Tentar novamente</a>
+            </div>
           </div>
         {% endif %}
       </div>
