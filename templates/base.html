@@ -12,8 +12,31 @@
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <style>
-    /* Fallback inline (garantia) */
-    :root { --primary:#6C63FF; --primary-dark:#5A52D5; --secondary:#00D2FF; --bg-body:#0A0A12; --surface:#11111C; --surface-elevated:#171725; --border:#252538; --text-primary:#F5F7FF; --text-secondary:#9CA3B5; --text-tertiary:#6B6B8A; --success:#22C55E; --warning:#F59E0B; --danger:#EF4444; --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --shadow-sm:0 2px 8px rgba(0,0,0,0.3); --shadow-md:0 4px 20px rgba(0,0,0,0.4); --shadow-lg:0 8px 40px rgba(0,0,0,0.6); --transition:0.2s ease; --font:'Inter',sans-serif; --navbar-height:68px; }
+    /* Fallback inline com textos mais claros */
+    :root {
+      --primary: #6C63FF;
+      --primary-dark: #5A52D5;
+      --secondary: #00D2FF;
+      --bg-body: #0A0A12;
+      --surface: #11111C;
+      --surface-elevated: #171725;
+      --border: #252538;
+      --text-primary: #FFFFFF;
+      --text-secondary: #D0D4E8;
+      --text-tertiary: #A0A8C0;
+      --success: #22C55E;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+      --transition: 0.2s ease;
+      --font: 'Inter', sans-serif;
+      --navbar-height: 68px;
+    }
     body { background:var(--bg-body); font-family:var(--font); color:var(--text-secondary); min-height:100vh; line-height:1.6; }
     .navbar-top { position:fixed; top:0; left:0; right:0; height:var(--navbar-height); background:rgba(10,10,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); z-index:1000; display:flex; align-items:center; padding:0 2rem; }
     .navbar-top .navbar-brand { font-size:1.2rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.6rem; text-decoration:none; }
@@ -168,3 +191,46 @@
   {% block extra_js %}{% endblock %}
 </body>
 </html>
+<!-- FORÇAR CORES CLARAS (FALLBACK) -->
+<style>
+  body, .card, .list-group-item, .navbar-top, .modal-content, .dropdown-menu,
+  h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th, label, .form-control, .form-select,
+  .text-muted, .text-secondary, .text-tertiary {
+    color: #FFFFFF !important;
+  }
+  .text-muted { color: #B0B8D0 !important; }
+  .card .card-title { color: #B0B8D0 !important; }
+  .navbar-top .navbar-links a { color: #D0D4E8 !important; }
+  .navbar-top .navbar-links a:hover { color: #FFFFFF !important; }
+  .navbar-top .user-badge { color: #D0D4E8 !important; }
+  .navbar-top .btn-logout { color: #D0D4E8 !important; }
+  .navbar-top .btn-logout:hover { color: #FFFFFF !important; }
+  .form-control, .form-select { color: #FFFFFF !important; background: rgba(255,255,255,0.04) !important; }
+  .form-control::placeholder { color: #A0A8C0 !important; }
+  .form-label { color: #D0D4E8 !important; }
+  .badge-secondary { color: #B0B8D0 !important; }
+  .list-group-item { color: #D0D4E8 !important; }
+  .list-group-item:hover { color: #FFFFFF !important; }
+  .alert { color: #FFFFFF !important; }
+  .alert-success { color: #22C55E !important; }
+  .alert-danger { color: #EF4444 !important; }
+  .alert-warning { color: #F59E0B !important; }
+  .alert-info { color: #00D2FF !important; }
+  .modal-title { color: #FFFFFF !important; }
+  .modal-content { color: #D0D4E8 !important; }
+  .dropdown-item { color: #D0D4E8 !important; }
+  .dropdown-item:hover { color: #FFFFFF !important; }
+  .table { color: #D0D4E8 !important; }
+  .table th { color: #FFFFFF !important; }
+  .table td { color: #D0D4E8 !important; }
+  .pagination .page-link { color: #D0D4E8 !important; }
+  .pagination .page-link:hover { color: #FFFFFF !important; }
+  .nav-tabs .nav-link { color: #D0D4E8 !important; }
+  .nav-tabs .nav-link.active { color: #FFFFFF !important; }
+  /* Força tudo dentro de cards */
+  .card * { color: inherit !important; }
+  .card .card-body * { color: inherit !important; }
+  /* Links */
+  a { color: #8B83FF !important; }
+  a:hover { color: #A89BFF !important; }
+</style>
