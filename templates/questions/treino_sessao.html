@@ -1,17 +1,25 @@
 {% extends 'base.html' %}
-{% block title %}Resolver Questão{% endblock %}
+{% load static %}
+{% block title %}Treino Inteligente{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card bg-dark text-light border-secondary">
-      <div class="card-header bg-dark border-secondary">
-        <h4 class="mb-0"><i class="bi bi-question-circle me-2"></i>Resolver Questão</h4>
+      <div class="card-header bg-dark border-secondary d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-robot me-2"></i>Treino</h4>
+        <span class="badge bg-primary">{{ indice }} de {{ total }}</span>
       </div>
       <div class="card-body">
+        <!-- Barra de progresso -->
+        <div class="progress mb-3" style="height: 6px;">
+          <div class="progress-bar" role="progressbar" style="width: {{ progresso }}%;" aria-valuenow="{{ progresso }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+
         <h5 class="text-light">{{ question.enunciado }}</h5>
-        <form method="post" id="resolve-form">
+        <form method="post" id="treino-form" action="{% url 'questions:treino_responder' %}">
           {% csrf_token %}
+          <input type="hidden" name="question_id" value="{{ question.id }}">
           <div class="mt-3">
             <div class="form-check">
               <input class="form-check-input" type="radio" name="resposta" id="a" value="a" required>
@@ -32,12 +40,12 @@
           </div>
           <input type="hidden" name="tempo" id="tempo" value="0">
           <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Confirmar resposta</button>
-            <a href="{% url 'questions:bank' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Responder</button>
+            <a href="{% url 'questions:treino_inteligente' %}" class="btn btn-secondary">Sair do treino</a>
           </div>
         </form>
 
-        <!-- Resultado com alertas escuros -->
+        <!-- Resultado -->
         {% if resultado %}
           <div class="mt-4">
             {% if acertou %}
@@ -55,9 +63,8 @@
                 <p><strong>Explicação:</strong> {{ question.explicacao }}</p>
               </div>
             {% endif %}
-            <div class="mt-3 d-flex gap-2">
-              <a href="{% url 'questions:bank' %}" class="btn btn-primary">Voltar para o banco</a>
-              <a href="{% url 'questions:resolve' question.pk %}" class="btn btn-secondary">Tentar novamente</a>
+            <div class="mt-3">
+              <a href="{% url 'questions:treino_sessao' %}" class="btn btn-primary">Próxima questão</a>
             </div>
           </div>
         {% endif %}
@@ -67,9 +74,8 @@
 </div>
 
 <script>
-  // Marcar tempo gasto
   let startTime = Date.now();
-  document.getElementById('resolve-form').addEventListener('submit', function() {
+  document.getElementById('treino-form').addEventListener('submit', function() {
     let elapsed = Math.floor((Date.now() - startTime) / 1000);
     document.getElementById('tempo').value = elapsed;
   });

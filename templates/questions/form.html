@@ -3,88 +3,125 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">
-        <h4><i class="bi bi-question-circle me-2"></i>{% if object %}Editar Questão{% else %}Nova Questão{% endif %}</h4>
+  <div class="col-md-10">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary">
+        <h4 class="mb-0 text-light"><i class="bi bi-question-circle me-2"></i>{% if object %}Editar Questão{% else %}Nova Questão{% endif %}</h4>
       </div>
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
+
+          {% if form.errors %}
+            <div class="alert alert-danger">
+              <strong>Erro:</strong> Corrija os campos destacados.
+            </div>
+          {% endif %}
+
+          <!-- Concurso/Estudo -->
           <div class="mb-3">
-            <label for="id_topic" class="form-label">Assunto</label>
-            <select name="topic" id="id_topic" class="form-select" required>
-              <option value="">Selecione...</option>
-              {% for topic in form.fields.topic.queryset %}
-                <option value="{{ topic.id }}" {% if form.instance.topic_id == topic.id %}selected{% endif %}>
-                  {{ topic.subject.contest.name }} → {{ topic.subject.name }} → {{ topic.name }}
-                </option>
-              {% endfor %}
-            </select>
+            <label for="id_contest" class="form-label text-light">Concurso/Estudo</label>
+            {{ form.contest }}
           </div>
+
+          <!-- Tópico/Assunto -->
           <div class="mb-3">
-            <label for="id_enunciado" class="form-label">Enunciado</label>
-            <textarea name="enunciado" id="id_enunciado" class="form-control" rows="3" required>{{ form.instance.enunciado }}</textarea>
+            <label for="id_topic" class="form-label text-light">Assunto</label>
+            {{ form.topic }}
           </div>
+
+          <!-- Enunciado (CORRIGIDO: texto claro) -->
+          <div class="mb-3">
+            <label for="id_enunciado" class="form-label text-light">Enunciado</label>
+            <textarea name="enunciado" id="id_enunciado" class="form-control bg-dark text-light border-secondary" rows="4" placeholder="Digite o enunciado da questão...">{{ form.instance.enunciado|default:'' }}</textarea>
+          </div>
+
+          <!-- Alternativas -->
           <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_alternativa_a" class="form-label">Alternativa A</label>
-                <input type="text" name="alternativa_a" id="id_alternativa_a" class="form-control" value="{{ form.instance.alternativa_a }}" required>
-              </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_alternativa_a" class="form-label text-light">Alternativa A</label>
+              <input type="text" name="alternativa_a" id="id_alternativa_a" class="form-control bg-dark text-light border-secondary" value="{{ form.instance.alternativa_a|default:'' }}">
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_alternativa_b" class="form-label">Alternativa B</label>
-                <input type="text" name="alternativa_b" id="id_alternativa_b" class="form-control" value="{{ form.instance.alternativa_b }}" required>
-              </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_alternativa_b" class="form-label text-light">Alternativa B</label>
+              <input type="text" name="alternativa_b" id="id_alternativa_b" class="form-control bg-dark text-light border-secondary" value="{{ form.instance.alternativa_b|default:'' }}">
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_alternativa_c" class="form-label">Alternativa C</label>
-                <input type="text" name="alternativa_c" id="id_alternativa_c" class="form-control" value="{{ form.instance.alternativa_c }}" required>
-              </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_alternativa_c" class="form-label text-light">Alternativa C</label>
+              <input type="text" name="alternativa_c" id="id_alternativa_c" class="form-control bg-dark text-light border-secondary" value="{{ form.instance.alternativa_c|default:'' }}">
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_alternativa_d" class="form-label">Alternativa D</label>
-                <input type="text" name="alternativa_d" id="id_alternativa_d" class="form-control" value="{{ form.instance.alternativa_d }}" required>
-              </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_alternativa_d" class="form-label text-light">Alternativa D</label>
+              <input type="text" name="alternativa_d" id="id_alternativa_d" class="form-control bg-dark text-light border-secondary" value="{{ form.instance.alternativa_d|default:'' }}">
             </div>
           </div>
+
+          <!-- Resposta correta e Dificuldade -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="id_alternativa_correta" class="form-label text-light">Resposta correta</label>
+              <select name="alternativa_correta" id="id_alternativa_correta" class="form-select bg-dark text-light border-secondary">
+                <option value="a" {% if form.instance.alternativa_correta == 'a' %}selected{% endif %}>A</option>
+                <option value="b" {% if form.instance.alternativa_correta == 'b' %}selected{% endif %}>B</option>
+                <option value="c" {% if form.instance.alternativa_correta == 'c' %}selected{% endif %}>C</option>
+                <option value="d" {% if form.instance.alternativa_correta == 'd' %}selected{% endif %}>D</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="id_dificuldade" class="form-label text-light">Dificuldade</label>
+              <select name="dificuldade" id="id_dificuldade" class="form-select bg-dark text-light border-secondary">
+                <option value="1" {% if form.instance.dificuldade == 1 %}selected{% endif %}>1 - Muito fácil</option>
+                <option value="2" {% if form.instance.dificuldade == 2 %}selected{% endif %}>2 - Fácil</option>
+                <option value="3" {% if form.instance.dificuldade == 3 %}selected{% endif %}>3 - Médio</option>
+                <option value="4" {% if form.instance.dificuldade == 4 %}selected{% endif %}>4 - Difícil</option>
+                <option value="5" {% if form.instance.dificuldade == 5 %}selected{% endif %}>5 - Muito difícil</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Explicação -->
           <div class="mb-3">
-            <label for="id_alternativa_correta" class="form-label">Alternativa Correta</label>
-            <select name="alternativa_correta" id="id_alternativa_correta" class="form-select" required>
-              <option value="">Selecione...</option>
-              <option value="a" {% if form.instance.alternativa_correta == 'a' %}selected{% endif %}>A</option>
-              <option value="b" {% if form.instance.alternativa_correta == 'b' %}selected{% endif %}>B</option>
-              <option value="c" {% if form.instance.alternativa_correta == 'c' %}selected{% endif %}>C</option>
-              <option value="d" {% if form.instance.alternativa_correta == 'd' %}selected{% endif %}>D</option>
-            </select>
+            <label for="id_explicacao" class="form-label text-light">Explicação</label>
+            <textarea name="explicacao" id="id_explicacao" class="form-control bg-dark text-light border-secondary" rows="3">{{ form.instance.explicacao|default:'' }}</textarea>
           </div>
+
+          <!-- BANCA -->
           <div class="mb-3">
-            <label for="id_explicacao" class="form-label">Explicação (opcional)</label>
-            <textarea name="explicacao" id="id_explicacao" class="form-control" rows="3">{{ form.instance.explicacao }}</textarea>
+            <label for="id_banca" class="form-label text-light">Banca</label>
+            <input type="text" name="banca" id="id_banca" class="form-control bg-dark text-light border-secondary" placeholder="Ex: CESPE, FCC, Vunesp" value="{{ form.instance.banca|default:'' }}">
+            <small class="text-secondary">Ex: CESPE, FCC, Vunesp, FGV</small>
           </div>
+
+          <!-- ANO -->
           <div class="mb-3">
-            <label for="id_dificuldade" class="form-label">Dificuldade</label>
-            <select name="dificuldade" id="id_dificuldade" class="form-select">
-              <option value="1" {% if form.instance.dificuldade == 1 %}selected{% endif %}>1 - Muito fácil</option>
-              <option value="2" {% if form.instance.dificuldade == 2 %}selected{% endif %}>2 - Fácil</option>
-              <option value="3" {% if form.instance.dificuldade == 3 %}selected{% endif %}>3 - Médio</option>
-              <option value="4" {% if form.instance.dificuldade == 4 %}selected{% endif %}>4 - Difícil</option>
-              <option value="5" {% if form.instance.dificuldade == 5 %}selected{% endif %}>5 - Muito difícil</option>
-            </select>
+            <label for="id_ano" class="form-label text-light">Ano</label>
+            <input type="number" name="ano" id="id_ano" class="form-control bg-dark text-light border-secondary" placeholder="Ex: 2024" value="{{ form.instance.ano|default:'' }}">
           </div>
-          <button type="submit" class="btn btn-success w-100">
-            <i class="bi bi-save me-1"></i> Salvar
-          </button>
+
+          <!-- FONTE -->
+          <div class="mb-3">
+            <label for="id_fonte" class="form-label text-light">Fonte</label>
+            <input type="text" name="fonte" id="id_fonte" class="form-control bg-dark text-light border-secondary" placeholder="Ex: Prova X, Livro Y" value="{{ form.instance.fonte|default:'' }}">
+            <small class="text-secondary">Ex: Prova X, Livro Y, PDF do professor</small>
+          </div>
+
+          <!-- STATUS -->
+          <div class="mb-3 form-check">
+            <input type="checkbox" name="status" id="id_status" class="form-check-input" {% if form.instance.status %}checked{% endif %}>
+            <label for="id_status" class="form-check-label text-light">Ativa</label>
+            <small class="text-secondary d-block">Desmarque para desativar a questão.</small>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-save me-1"></i> Salvar
+            </button>
+            <a href="{% url 'questions:bank' %}" class="btn btn-secondary">Cancelar</a>
+          </div>
         </form>
       </div>
     </div>
-    <a href="{% url 'questions:list' %}" class="btn btn-secondary mt-3">
-      <i class="bi bi-arrow-left me-1"></i> Voltar para lista
-    </a>
+    <a href="{% url 'questions:bank' %}" class="btn btn-secondary mt-3">Voltar para o banco</a>
   </div>
 </div>
 {% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Configurar Treino Inteligente{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary">
+        <h4 class="mb-0"><i class="bi bi-gear me-2"></i>Configurar Treino</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-secondary">O sistema selecionará automaticamente as melhores questões com base no seu desempenho.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="materia" class="form-label text-light">Matéria</label>
+            <select name="materia" id="materia" class="form-select bg-dark text-light border-secondary">
+              <option value="">Todas</option>
+              {% for subject in subjects %}
+                <option value="{{ subject.id }}">{{ subject.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="topico" class="form-label text-light">Tópico</label>
+            <select name="topico" id="topico" class="form-select bg-dark text-light border-secondary">
+              <option value="">Todos</option>
+              {% for topic in topics %}
+                <option value="{{ topic.id }}">{{ topic.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="quantidade" class="form-label text-light">Quantidade de questões</label>
+            <input type="number" name="quantidade" id="quantidade" class="form-control bg-dark text-light border-secondary" value="10" min="1" max="50">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-light">Dificuldade</label>
+            <div class="d-flex flex-wrap gap-3">
+              {% for key, value in difficulty_choices %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="dificuldade" id="dif{{ key }}" value="{{ key }}" checked>
+                  <label class="form-check-label text-light" for="dif{{ key }}">{{ value }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="estrategia" class="form-label text-light">Estratégia</label>
+            <select name="estrategia" id="estrategia" class="form-select bg-dark text-light border-secondary">
+              {% for key, value in estrategias %}
+                <option value="{{ key }}" {% if forloop.first %}selected{% endif %}>{{ value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Iniciar treino</button>
+        </form>
+      </div>
+    </div>
+    <a href="{% url 'questions:bank' %}" class="btn btn-secondary mt-3">Voltar para o banco</a>
+  </div>
+</div>
+{% endblock %}
