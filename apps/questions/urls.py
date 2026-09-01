@@ -21,4 +21,8 @@ urlpatterns = [
     path('performance/', views.performance, name='performance'),
     path('import/', views.import_questions, name='import'),
     path('<int:pk>/resolver/', views.resolve_question, name='resolve'),
+    path('erros/', views.error_log_list, name='error_log'),
+    path('treino/', views.treino_inteligente, name='treino_inteligente'),
+    path('treino/sessao/', views.treino_sessao, name='treino_sessao'),
+    path('treino/responder/', views.treino_responder, name='treino_responder'),
 ]

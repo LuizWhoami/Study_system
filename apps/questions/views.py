@@ -355,3 +355,265 @@ def resolve_question(request, pk):
         'resposta_usuario': resposta_usuario,
     }
     return render(request, 'questions/resolve.html', context)
+
+# ============================
+# RESOLUÇÃO DE QUESTÕES
+# ============================
+
+@login_required
+def resolve_question(request, pk):
+    question = get_object_or_404(Question, pk=pk, user=request.user)
+    resultado = None
+    acertou = False
+    resposta_usuario = None
+
+    if request.method == 'POST':
+        resposta_usuario = request.POST.get('resposta')
+        if resposta_usuario:
+            acertou = (resposta_usuario == question.alternativa_correta)
+            # Registrar tentativa
+            QuestionAttempt.objects.create(
+                user=request.user,
+                question=question,
+                resposta_escolhida=resposta_usuario,
+                correta=acertou,
+                tempo_gasto=request.POST.get('tempo', 0),
+                modo='treino',
+                contest=question.contest,
+                topic=question.topic,
+            )
+            if not acertou:
+                # Registrar erro no caderno de erros
+                ErrorLog.objects.create(
+                    user=request.user,
+                    question=question,
+                    motivo=request.POST.get('motivo', 'desconhecido'),
+                )
+            resultado = True
+
+    context = {
+        'question': question,
+        'resultado': resultado,
+        'acertou': acertou,
+        'resposta_usuario': resposta_usuario,
+    }
+    return render(request, 'questions/resolve.html', context)
+
+# ============================
+# CADERNO DE ERROS
+# ============================
+
+@login_required
+def error_log_list(request):
+    errors = ErrorLog.objects.filter(user=request.user).select_related('question', 'question__topic', 'question__topic__subject')
+    context = {'errors': errors}
+    return render(request, 'questions/error_log.html', context)
+
+# ============================
+# TREINO INTELIGENTE
+# ============================
+
+from django.db.models import Count, Q, Case, When, Value, FloatField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+
+@login_required
+def treino_inteligente(request):
+    if request.method == 'POST':
+        materia_id = request.POST.get('materia')
+        topico_id = request.POST.get('topico')
+        quantidade = int(request.POST.get('quantidade', 10))
+        dificuldade = request.POST.getlist('dificuldade')
+        estrategia = request.POST.get('estrategia')
+
+        # Base: questões do usuário, ativas
+        qs = Question.objects.filter(user=request.user, status=True)
+
+        if materia_id:
+            qs = qs.filter(topic__subject_id=materia_id)
+        if topico_id:
+            qs = qs.filter(topic_id=topico_id)
+        if dificuldade:
+            qs = qs.filter(dificuldade__in=dificuldade)
+
+        # Estratégias
+        if estrategia == 'erros':
+            # Questões com mais erros
+            qs = qs.annotate(
+                total_erros=Count('questionattempt', filter=Q(questionattempt__correta=False))
+            ).order_by('-total_erros')
+        elif estrategia == 'nunca_respondidas':
+            # Questões nunca respondidas
+            qs = qs.annotate(total=Count('questionattempt')).filter(total=0)
+        elif estrategia == 'atrasadas':
+            # Revisões atrasadas (questões com revisão pendente)
+            from datetime import date
+            qs = qs.filter(questionreview__proxima_revisao__lte=date.today())
+        elif estrategia == 'baixo_desempenho':
+            # Tópicos com baixo desempenho (< 50% de acerto)
+            qs = qs.annotate(
+                total=Count('questionattempt'),
+                acertos=Count('questionattempt', filter=Q(questionattempt__correta=True)),
+                taxa=Case(
+                    When(total=0, then=Value(0.0)),
+                    default=ExpressionWrapper(
+                        F('acertos') * 100.0 / F('total'),
+                        output_field=FloatField()
+                    )
+                )
+            ).filter(taxa__lt=50.0)
+        else:  # aleatório
+            qs = qs.order_by('?')
+
+        # Limitar quantidade
+        questoes = list(qs[:quantidade])
+
+        if not questoes:
+            messages.warning(request, 'Nenhuma questão encontrada com os critérios selecionados.')
+            return redirect('questions:treino_inteligente')
+
+        # Salvar IDs na sessão
+        request.session['treino_questoes'] = [q.id for q in questoes]
+        request.session['treino_indice'] = 0
+        return redirect('questions:treino_sessao')
+
+    # GET: exibir configuração
+    subjects = Subject.objects.filter(contest__user=request.user)
+    topics = Topic.objects.filter(subject__contest__user=request.user)
+    difficulty_choices = Question.DIFFICULTY_CHOICES
+    estrategias = [
+        ('erros', 'Questões com mais erros'),
+        ('nunca_respondidas', 'Questões nunca respondidas'),
+        ('atrasadas', 'Revisões atrasadas'),
+        ('baixo_desempenho', 'Tópicos com baixo desempenho'),
+        ('aleatorio', 'Aleatório'),
+    ]
+
+    context = {
+        'subjects': subjects,
+        'topics': topics,
+        'difficulty_choices': difficulty_choices,
+        'estrategias': estrategias,
+    }
+    return render(request, 'questions/treino_config.html', context)
+
+
+@login_required
+def treino_sessao(request):
+    # Se não houver questões na sessão, voltar à configuração
+    if 'treino_questoes' not in request.session:
+        messages.warning(request, 'Nenhum treino em andamento.')
+        return redirect('questions:treino_inteligente')
+
+    questoes_ids = request.session.get('treino_questoes', [])
+    indice = request.session.get('treino_indice', 0)
+
+    # Se já terminou todas as questões
+    if indice >= len(questoes_ids):
+        messages.success(request, 'Treino concluído! 🎉')
+        request.session.pop('treino_questoes', None)
+        request.session.pop('treino_indice', None)
+        return redirect('questions:treino_inteligente')
+
+    question = get_object_or_404(Question, pk=questoes_ids[indice], user=request.user)
+
+    resultado = None
+    acertou = False
+    resposta_usuario = None
+
+    # Se o usuário enviou uma resposta (POST)
+    if request.method == 'POST':
+        if 'proximo' in request.POST:
+            # Avançar para a próxima
+            request.session['treino_indice'] = indice + 1
+            return redirect('questions:treino_sessao')
+
+        # Resposta da questão atual
+        resposta_usuario = request.POST.get('resposta')
+        if resposta_usuario:
+            acertou = (resposta_usuario == question.alternativa_correta)
+            # Registrar tentativa
+            QuestionAttempt.objects.create(
+                user=request.user,
+                question=question,
+                resposta_escolhida=resposta_usuario,
+                correta=acertou,
+                tempo_gasto=request.POST.get('tempo', 0),
+                modo='treino',
+                contest=question.contest,
+                topic=question.topic,
+            )
+            if not acertou:
+                # Registrar erro no caderno de erros
+                ErrorLog.objects.create(
+                    user=request.user,
+                    question=question,
+                    motivo=request.POST.get('motivo', 'desconhecido'),
+                )
+            resultado = True
+
+    # Se houve resposta, passar resultado para o template
+    context = {
+        'question': question,
+        'indice': indice + 1,
+        'total': len(questoes_ids),
+        'progresso': int((indice) / len(questoes_ids) * 100) if len(questoes_ids) > 0 else 0,
+        'resultado': resultado,
+        'acertou': acertou,
+        'resposta_usuario': resposta_usuario,
+    }
+    return render(request, 'questions/treino_sessao.html', context)
+
+# ============================
+# TREINO INTELIGENTE - RESPONDER
+# ============================
+
+@login_required
+def treino_responder(request):
+    if request.method == 'POST':
+        question_id = request.POST.get('question_id')
+        resposta = request.POST.get('resposta')
+        tempo = int(request.POST.get('tempo', 0))
+        question = get_object_or_404(Question, id=question_id, user=request.user)
+
+        acertou = (resposta == question.alternativa_correta)
+
+        # Registrar tentativa
+        QuestionAttempt.objects.create(
+            user=request.user,
+            question=question,
+            resposta_escolhida=resposta,
+            correta=acertou,
+            tempo_gasto=tempo,
+            modo='treino',
+            contest=question.contest,
+            topic=question.topic,
+        )
+
+        if not acertou:
+            ErrorLog.objects.create(
+                user=request.user,
+                question=question,
+                motivo='desconhecido',
+            )
+
+        # Armazenar resultado na sessão para exibir na página
+        request.session['ultimo_resultado'] = {
+            'acertou': acertou,
+            'resposta': resposta,
+            'correta': question.alternativa_correta,
+            'explicacao': question.explicacao,
+        }
+
+        # Avançar para a próxima questão ou finalizar
+        questoes_ids = request.session.get('treino_questoes', [])
+        indice = request.session.get('treino_indice', 0)
+        indice += 1
+        request.session['treino_indice'] = indice
+
+        if indice >= len(questoes_ids):
+            messages.success(request, 'Treino concluído!')
+            return redirect('questions:treino_inteligente')
+
+        return redirect('questions:treino_sessao')
+
+    return redirect('questions:treino_inteligente')
