@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Página não encontrada - Barbearia LS{% endblock %}
+
+{% block page_title %}404 - Página Não Encontrada{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-container {
+        text-align: center;
+        padding: 60px 20px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .error-container .error-code {
+        font-size: 8rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+        margin-bottom: 10px;
+        opacity: 0.6;
+    }
+    .error-container .error-icon {
+        font-size: 4rem;
+        color: var(--accent);
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+    .error-container h2 {
+        color: var(--text-primary);
+        font-weight: 300;
+        font-size: 2rem;
+        margin-bottom: 12px;
+    }
+    .error-container p {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+        line-height: 1.6;
+    }
+    .error-container .btn-home {
+        background: var(--accent-gradient);
+        color: white;
+        border: none;
+        padding: 12px 40px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: var(--transition);
+        text-decoration: none;
+        display: inline-block;
+    }
+    .error-container .btn-home:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 40px rgba(233,69,96,0.3);
+        color: white;
+    }
+    .error-container .btn-home i {
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-map-signs"></i>
+    </div>
+    <div class="error-code">404</div>
+    <h2>Página não encontrada</h2>
+    <p>
+        A página que você está procurando pode ter sido removida, renomeada ou
+        estar temporariamente indisponível.
+    </p>
+    <a href="{% url 'client:home' %}" class="btn-home">
+        <i class="fas fa-home"></i> Voltar para o início
+    </a>
+</div>
+{% endblock %}
