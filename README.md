@@ -17,3 +17,4 @@ Sistema completo para organização de estudos, com foco em produtividade, revis
 7. Inicie o servidor: `python manage.py runserver`
  
 #### tem algumas dependecias
+### Sistema de Estudos
