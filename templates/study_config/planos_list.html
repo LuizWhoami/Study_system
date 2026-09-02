@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Meus Planos de Estudos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-calendar-check me-2"></i>Meus Planos de Estudos</h2>
+  <a href="{% url 'study_config:config' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Novo Plano
+  </a>
+</div>
+
+<!-- Exibir mensagens -->
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}success{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% if planos %}
+  <div class="row g-4">
+    {% for plano in planos %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 {% if plano.is_active %}border-primary{% endif %}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h5 class="card-title">
+                {{ plano.objective|default:"Plano" }}
+                {% if plano.is_active %}
+                  <span class="badge bg-primary">Ativo</span>
+                {% endif %}
+              </h5>
+              <small class="text-muted">{{ plano.created_at|date:"d/m/Y" }}</small>
+            </div>
+            <p class="card-text text-muted small">
+              <strong>Objetivo:</strong> {{ plano.get_objective_display }}<br>
+              <strong>Nível:</strong> {{ plano.get_level_display }}<br>
+              <strong>Prioridade:</strong> {{ plano.get_priority_display }}<br>
+              <strong>Matérias:</strong> {{ plano.selected_contests.count }}
+            </p>
+            <p class="card-text text-muted small">
+              <strong>Metas:</strong>
+              {{ plano.target_hours_week }}h/semana
+              {% if plano.target_questions_week %}
+                | {{ plano.target_questions_week }} questões/semana
+              {% endif %}
+            </p>
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              {% if not plano.is_active %}
+                <form method="post" action="{% url 'study_config:plano_activate' plano.pk %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-success">
+                    <i class="bi bi-check-circle"></i> Ativar
+                  </button>
+                </form>
+              {% endif %}
+              <a href="{% url 'study_config:config' %}?edit={{ plano.pk }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i> Editar
+              </a>
+              <a href="{% url 'study_config:meu_plano' %}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-eye"></i> Ver
+              </a>
+              <!-- Formulário POST para excluir -->
+              <form method="post" action="{% url 'study_config:plano_delete' plano.pk %}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este plano{% if plano.is_active %} (ATIVO){% endif %}?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i> Excluir
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i> Nenhum plano de estudos cadastrado.
+    <a href="{% url 'study_config:config' %}" class="alert-link">Crie seu primeiro plano</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+<<<<<<< HEAD
   <style>
     /* Fallback inline com textos mais claros */
     :root {
@@ -100,6 +101,8 @@
     .modal-title { color:var(--text-primary); }
     .btn-close { filter:invert(1); }
   </style>
+=======
+>>>>>>> f3fb930358b3bb72d95660cd150bf3cf89da8727
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -142,6 +145,9 @@
       </a>
       <a href="{% url 'study_config:config' %}" class="{% if 'config' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-gear"></i> Configurações
+      </a>
+      <a href="{% url 'study_config:planos_list' %}" class="{% if 'planos_list' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-calendar-check"></i> Meus Planos
       </a>
     </div>
     <div class="navbar-right">

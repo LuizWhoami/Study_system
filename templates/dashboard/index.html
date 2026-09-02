@@ -3,16 +3,60 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- Hero -->
+<!-- ===== HOJE (SEÇÃO PRINCIPAL) ===== -->
 <div class="hero-section">
-  <h1>Bem-vindo(a), {{ user.username }} 👋</h1>
-  <p>Organize, estude e conquiste seus objetivos com foco e consistência.</p>
-  <a href="{% url 'study:study' %}" class="btn btn-primary">
-    <i class="bi bi-play-fill"></i> Começar agora
-  </a>
+  <h1>Bom dia, {{ user.username }} 👋</h1>
+  <p>Vamos continuar seus estudos?</p>
 </div>
 
-<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+  <!-- Meta e progresso do dia -->
+  <div class="col-md-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <h5 class="card-title text-light">📊 Hoje</h5>
+        <div class="d-flex justify-content-between align-items-center">
+          <span>Meta: {{ today_plan.daily_goal_hours }}h</span>
+          <span>{{ today_plan.hours_done|floatformat:1 }}h / {{ today_plan.daily_goal_hours }}h</span>
+        </div>
+        <div class="progress mb-2" style="height: 10px;">
+          <div class="progress-bar" role="progressbar" style="width: {{ today_plan.progress_percent }}%;" aria-valuenow="{{ today_plan.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="d-flex justify-content-between text-secondary small">
+          <span>🔥 Sequência: {{ streak }} dias</span>
+          <span>⏳ Revisões pendentes: {{ today_plan.pending_question_reviews }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Próxima atividade -->
+  <div class="col-md-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <h5 class="card-title text-light">🎯 Próxima atividade</h5>
+        {% if today_plan.next_activity %}
+          <div class="p-3 bg-dark bg-opacity-25 rounded border border-secondary">
+            <h6 class="text-primary">{{ today_plan.next_activity.topic.subject.name }}</h6>
+            <p class="mb-1"><strong>{{ today_plan.next_activity.topic.name }}</strong></p>
+            <p class="text-secondary small">{{ today_plan.next_activity.reason }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="badge bg-primary">{{ today_plan.next_activity.estimated_time }} min</span>
+              <span class="badge bg-secondary">{{ today_plan.next_activity.questions_count }} questões</span>
+            </div>
+            <a href="{% url 'study:study' %}?topic={{ today_plan.next_activity.topic.id }}" class="btn btn-primary btn-sm mt-2">
+              <i class="bi bi-play-fill"></i> Começar agora
+            </a>
+          </div>
+        {% else %}
+          <p class="text-secondary">Nenhuma atividade recomendada. Que tal criar uma questão ou estudar um tópico?</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CARDS DE RESUMO (existentes) ===== -->
 <div class="row g-4">
   <div class="col-md-3 col-sm-6">
     <div class="card h-100">
@@ -26,7 +70,6 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-3 col-sm-6">
     <div class="card h-100">
       <div class="card-body">
@@ -39,7 +82,6 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-3 col-sm-6">
     <div class="card h-100">
       <div class="card-body">
@@ -52,7 +94,6 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-3 col-sm-6">
     <div class="card h-100">
       <div class="card-body">
@@ -67,7 +108,7 @@
   </div>
 </div>
 
-<!-- Progresso e Sessões -->
+<!-- ===== PROGRESSO E SESSÕES (existentes) ===== -->
 <div class="row g-4 mt-2">
   <div class="col-md-6">
     <div class="card h-100">
@@ -83,19 +124,18 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-6">
     <div class="card h-100">
       <div class="card-body">
         <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Últimas Sessões</h5>
-        <ul class="questions:bank-group questions:bank-group-flush">
+        <ul class="list-group list-group-flush">
           {% for session in last_sessions %}
-            <li class="questions:bank-group-item d-flex justify-content-between align-items-center">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
               <span><i class="bi bi-file-text me-2"></i>{{ session.topic.name|default:"Sem tópico" }}</span>
               <span class="badge bg-primary rounded-pill">{{ session.duration_minutes }} min</span>
             </li>
           {% empty %}
-            <li class="questions:bank-group-item text-muted">Nenhuma sessão registrada.</li>
+            <li class="list-group-item text-muted">Nenhuma sessão registrada.</li>
           {% endfor %}
         </ul>
       </div>
@@ -103,103 +143,71 @@
   </div>
 </div>
 
-<!-- Planejamento da Semana -->
+<!-- ===== PONTOS FRACOS ===== -->
 <div class="row mt-4">
   <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Planejamento da Semana</h5>
-        <a href="{% url 'calendar:calendar' %}" class="btn btn-sm btn-outline-primary">Ver calendário</a>
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0 text-light"><i class="bi bi-exclamation-triangle me-2"></i>Seus pontos fracos</h5>
       </div>
       <div class="card-body">
-        {% if has_plan %}
-          <div class="row g-2">
-            {% for day in week_plan %}
-              <div class="col text-center">
-                <div class="p-2 rounded {% if day.is_today %}border border-primary{% endif %}" style="background:rgba(255,255,255,0.02);">
-                  <div class="small text-muted">{{ day.day_name }}</div>
-                  <div class="mt-1">
-                    {% if day.activity == 'study' %}
-                      <span class="badge bg-primary">📚 Estudo</span>
-                    {% elif day.activity == 'review' %}
-                      <span class="badge bg-warning text-dark">🔄 Revisão</span>
-                    {% elif day.activity == 'questions' %}
-                      <span class="badge bg-info">❓ Questões</span>
-                    {% elif day.activity == 'summary' %}
-                      <span class="badge bg-secondary">📝 Resumo</span>
-                    {% elif day.activity == 'rest' %}
-                      <span class="badge bg-dark">😴 Descanso</span>
-                    {% else %}
-                      <span class="text-muted" style="font-size:0.7rem;">—</span>
-                    {% endif %}
+        {% if today_plan.weak_topics %}
+          <div class="row g-3">
+            {% for weak in today_plan.weak_topics %}
+              <div class="col-md-4">
+                <div class="p-3 bg-dark bg-opacity-25 rounded border border-secondary">
+                  <h6 class="text-danger">{{ weak.topic.subject.name }}</h6>
+                  <p>{{ weak.topic.name }}</p>
+                  <div class="d-flex justify-content-between">
+                    <span class="badge bg-danger">Domínio: {{ weak.mastery }}%</span>
+                    <span class="badge bg-secondary">Prioridade: {{ weak.priority }}</span>
                   </div>
+                  <a href="{% url 'questions:treino_inteligente' %}?topic={{ weak.topic.id }}" class="btn btn-sm btn-outline-primary mt-2">Treinar</a>
                 </div>
               </div>
             {% endfor %}
           </div>
-          <div class="row mt-3">
-            <div class="col-12">
-              <small class="text-muted">
-                📚 Estudo: {{ activities_count.study }} |
-                🔄 Revisão: {{ activities_count.review }} |
-                ❓ Questões: {{ activities_count.questions }} |
-                📝 Resumo: {{ activities_count.summary }} |
-                😴 Descanso: {{ activities_count.rest }}
-              </small>
-            </div>
-          </div>
         {% else %}
-          <p class="text-muted text-center my-3">
-            Nenhum planejamento para esta semana.
-            <a href="{% url 'calendar:calendar' %}">Clique aqui para planejar seus dias.</a>
-          </p>
+          <p class="text-secondary">🎉 Nenhum ponto fraco identificado. Continue assim!</p>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- Revisões Pendentes -->
+<!-- ===== REVISÕES PENDENTES (flashcards e questões) ===== -->
 <div class="row mt-4">
   <div class="col-12">
     <div class="card">
       <div class="card-header">
         <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes</h5>
       </div>
-      <div class="card-body" id="pending-reviews-questions:bank">
+      <div class="card-body" id="pending-reviews-list">
         <div class="text-center text-muted">Carregando...</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Visão Geral -->
-<div class="row mt-4">
-  <div class="col-12 text-center">
-    <a href="{% url 'contests:general' %}" class="btn btn-primary btn-lg">
-      <i class="bi bi-globe2 me-2"></i> Ver Visão Geral
-    </a>
-  </div>
-</div>
-
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    // Carregar revisões pendentes (flashcards + questões)
+    const container = document.getElementById('pending-reviews-list');
     fetch('/estudo/pending-reviews/')
       .then(r => r.json())
       .then(data => {
-        const container = document.getElementById('pending-reviews-questions:bank');
         if (data.length === 0) {
           container.innerHTML = '<div class="alert alert-success">🎉 Nenhuma revisão pendente nos próximos 3 dias!</div>';
           return;
         }
-        let html = '<div class="questions:bank-group">';
+        let html = '<div class="list-group">';
         data.forEach(item => {
           const days = item.days_until;
           let badgeClass = 'bg-success';
           if (days <= 0) badgeClass = 'bg-danger';
           else if (days === 1) badgeClass = 'bg-warning text-dark';
           html += `
-            <div class="questions:bank-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item d-flex justify-content-between align-items-center">
               <div>
                 <strong>${item.topic}</strong>
                 <span class="text-muted ms-2">(${item.subject})</span>
@@ -215,7 +223,7 @@
         container.innerHTML = html;
       })
       .catch(err => {
-        document.getElementById('pending-reviews-questions:bank').innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
+        container.innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
         console.error(err);
       });
   });

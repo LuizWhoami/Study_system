@@ -9,6 +9,6 @@ class StudyConfigAdmin(admin.ModelAdmin):
 
 @admin.register(PlannedSession)
 class PlannedSessionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'date', 'subject_name', 'session_type', 'duration_minutes']
-    list_filter = ['user', 'session_type', 'date']
-    search_fields = ['subject_name']
+    list_display = ['user', 'date', 'contest', 'topic', 'session_type', 'status']
+    list_filter = ['user', 'session_type', 'status', 'date']
+    search_fields = ['user__username', 'contest__name', 'topic__name']
