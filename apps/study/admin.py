@@ -1,11 +1,14 @@
 from django.contrib import admin
 from .models import StudySession, DailyProgress, Goal, StudyContent
 
+
 @admin.register(StudySession)
 class StudySessionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'topic', 'start_time', 'duration_minutes']
-    list_filter = ['user', 'topic']
+    list_display = ['user', 'topic', 'status', 'start_time', 'duration_minutes']
+    list_filter = ['status', 'user']
     search_fields = ['user__username', 'topic__name']
+    readonly_fields = ['created_at', 'updated_at']
+
 
 @admin.register(DailyProgress)
 class DailyProgressAdmin(admin.ModelAdmin):
@@ -13,10 +16,12 @@ class DailyProgressAdmin(admin.ModelAdmin):
     list_filter = ['user']
     search_fields = ['user__username']
 
+
 @admin.register(Goal)
 class GoalAdmin(admin.ModelAdmin):
     list_display = ['user', 'period', 'target_hours', 'active']
     list_filter = ['user', 'period', 'active']
+
 
 @admin.register(StudyContent)
 class StudyContentAdmin(admin.ModelAdmin):
