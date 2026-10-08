@@ -1,6 +1,8 @@
 {% load static %}
 {% if user.is_authenticated %}
-<div id="study-timer" class="study-timer" data-authenticated="1" data-current-url="{% url 'study:current_session' %}" data-start-url="{% url 'study:start_session' %}" data-pause-url="{% url 'study:pause_session' %}" data-resume-url="{% url 'study:resume_session' %}" data-end-url="{% url 'study:end_session' %}" data-contests-url="{% url 'study:api_contests' %}">
+<div id="study-timer" class="study-timer" data-authenticated="1" data-current-url="{% url 'study:current_session' %}" data-start-url="{% url 'study:start_session' %}" data-pause-url="{% url 'study:pause_session' %}" data-resume-url="{% url 'study:resume_session' %}" data-end-url="{% url 'study:end_session' %}" data-contests-url="{% url 'study:api_contests' %}"
+       data-materias-url="{% url 'study:api_materias' 0 %}"
+       data-assuntos-url="{% url 'study:api_assuntos' 0 %}">
 
   {# ---------- IDLE ---------- #}
   <div class="study-timer__idle" data-idle>
