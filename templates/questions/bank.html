@@ -22,7 +22,7 @@
 <div class="card bg-dark text-light border-secondary mb-4">
   <div class="card-body">
     <form method="get" class="row g-3">
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label text-light">Matéria</label>
         <select name="subject" class="form-select bg-dark text-light border-secondary">
           <option value="">Todas</option>
@@ -31,12 +31,22 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label text-light">Tópico</label>
         <select name="topic" class="form-select bg-dark text-light border-secondary">
           <option value="">Todos</option>
           {% for topic in topics %}
             <option value="{{ topic.id }}" {% if request.GET.topic == topic.id|stringformat:'s' %}selected{% endif %}>{{ topic.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-light">Banca</label>
+        <select name="banca" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todas</option>
+          {% for banca in bancas %}
+            <option value="{{ banca }}" {% if request.GET.banca == banca %}selected{% endif %}>{{ banca }}</option>
           {% endfor %}
         </select>
       </div>

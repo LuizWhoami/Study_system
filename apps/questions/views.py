@@ -67,6 +67,7 @@ class QuestionBankView(LoginRequiredMixin, ListView):
         difficulty = self.request.GET.get('dificuldade')
         status = self.request.GET.get('status')
         search = self.request.GET.get('search')
+        banca = self.request.GET.get('banca')
 
         if topic:
             qs = qs.filter(topic_id=topic)
@@ -76,6 +77,8 @@ class QuestionBankView(LoginRequiredMixin, ListView):
             qs = qs.filter(contest_id=contest)
         if difficulty:
             qs = qs.filter(dificuldade=difficulty)
+        if banca:
+            qs = qs.filter(banca__iexact=banca)
         if status == 'active':
             qs = qs.filter(status=True)
         elif status == 'inactive':
@@ -99,6 +102,14 @@ class QuestionBankView(LoginRequiredMixin, ListView):
         context['subjects'] = Subject.objects.filter(contest__user=self.request.user)
         context['contests'] = Contest.objects.filter(user=self.request.user)
         context['difficulties'] = Question.DIFFICULTY_CHOICES
+        context['bancas'] = (
+            Question.objects
+            .filter(user=self.request.user)
+            .exclude(banca='')
+            .values_list('banca', flat=True)
+            .distinct()
+            .order_by('banca')
+        )
         context['filters'] = self.request.GET
         return context
 
