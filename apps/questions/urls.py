@@ -25,4 +25,7 @@ urlpatterns = [
     path('treino/', views.treino_inteligente, name='treino_inteligente'),
     path('treino/sessao/', views.treino_sessao, name='treino_sessao'),
     path('treino/responder/', views.treino_responder, name='treino_responder'),
+    # IA — geração de questões via Groq
+    path('ia/', views.ia_gerar_page, name='ia_gerar'),
+    path('ia/api/gerar/', views.ia_gerar_api, name='ia_gerar_api'),
 ]

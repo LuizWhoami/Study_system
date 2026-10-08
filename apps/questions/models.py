@@ -88,7 +88,7 @@ class Question(models.Model):
 # ============================
 class QuestionAttempt(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+    question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name='attempts')
     resposta_escolhida = models.CharField(max_length=1)
     correta = models.BooleanField()
     data = models.DateTimeField(auto_now_add=True)
@@ -116,7 +116,7 @@ class QuestionAttempt(models.Model):
 
 class QuestionReview(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+    question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name='reviews')
     proxima_revisao = models.DateField()
     intervalo = models.PositiveIntegerField(default=1)
     vezes_revisado = models.PositiveIntegerField(default=0)
@@ -140,7 +140,7 @@ class ErrorLog(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+    question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name='errors')
     motivo = models.CharField(max_length=20, choices=REASON_CHOICES, default='desconhecido')
     data = models.DateTimeField(auto_now_add=True)
     erro_consecutivo = models.PositiveSmallIntegerField(default=1)

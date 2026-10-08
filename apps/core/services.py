@@ -1,10 +1,25 @@
+"""
+Serviços compartilhados do LSStudy.
+
+`GroqService` encapsula a integração com a API do Groq para:
+  - geração de flashcards (usado por `notes`)
+  - geração de questões (usado por `notes` e `questions`)
+
+Se a API falhar, o serviço cai num fallback manual que extrai
+conteúdo do texto via regex. Para questões, o fallback NÃO inventa
+perguntas genéricas — devolve lista vazia para o caller tratar.
+"""
 import json
 import logging
 import re
 import random
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+MODEL = "openai/gpt-oss-120b"
+
 
 class GroqService:
     def __init__(self):
@@ -24,6 +39,9 @@ class GroqService:
         else:
             logger.warning("GROQ_API_KEY não configurada. Usando apenas fallback manual.")
 
+    # ==========================================================
+    # API PÚBLICA
+    # ==========================================================
     def gerar_flashcards(self, texto, quantidade=5):
         if self.enabled and texto and len(texto.strip()) >= 20:
             flashcards = self._gerar_com_ia(texto, quantidade, tipo='flashcard')
@@ -37,64 +55,170 @@ class GroqService:
             questoes = self._gerar_com_ia(texto, quantidade, tipo='questao')
             if questoes:
                 return questoes
-            logger.warning("IA não retornou questões, usando fallback.")
+            logger.warning("IA não retornou questões, usando fallback manual.")
         return self._extract_questoes(texto, quantidade)
 
+    # ==========================================================
+    # CHAMADA À IA
+    # ==========================================================
     def _gerar_com_ia(self, texto, quantidade, tipo='flashcard'):
         try:
-            import json
             if tipo == 'flashcard':
-                prompt = f"""Gere {quantidade} flashcards em JSON puro. Formato: [{{"pergunta":"...","resposta":"..."}}]
-                Texto: {texto}"""
-                model = "llama3-70b-8192"
-                max_tokens = 600
-            else:
-                prompt = f"""Gere {quantidade} questões de múltipla escolha em JSON puro.
-                Cada questão deve ter: enunciado, alternativas (a,b,c,d), correta, explicacao.
-                Formato: [{{"enunciado":"...","alternativas":{{"a":"...","b":"...","c":"...","d":"..."}},"correta":"a","explicacao":"..."}}]
-                Texto: {texto}"""
-                model = "llama3-70b-8192"
+                prompt = self._prompt_flashcards(texto, quantidade)
                 max_tokens = 800
+            else:
+                prompt = self._prompt_questoes(texto, quantidade)
+                max_tokens = 2000
 
             response = self.client.chat.completions.create(
-                model=model,
+                model=MODEL,
                 messages=[
-                    {"role": "system", "content": "Você é um assistente que responde APENAS com JSON. NUNCA inclua texto antes ou depois."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": (
+                            "Você responde APENAS com JSON válido. "
+                            "NUNCA inclua texto antes ou depois. "
+                            "NUNCA use markdown, blocos ```json, ou comentários."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
                 ],
-                temperature=0.1,
-                max_tokens=max_tokens
+                temperature=0.5,
+                max_tokens=max_tokens,
             )
             conteudo = response.choices[0].message.content.strip()
-            logger.info(f"Resposta bruta IA: {conteudo[:200]}...")
+            logger.info("Resposta bruta IA (primeiros 200 chars): %s", conteudo[:200])
 
             conteudo = re.sub(r'<think>.*?</think>', '', conteudo, flags=re.DOTALL)
+            conteudo = re.sub(r'^```(?:json)?\s*', '', conteudo)
+            conteudo = re.sub(r'\s*```$', '', conteudo)
+
             match = re.search(r'\[\s*\{.*\}\s*\]', conteudo, re.DOTALL)
-            if match:
-                json_str = match.group()
-                data = json.loads(json_str)
-                if isinstance(data, list) and len(data) > 0:
-                    # Embaralha alternativas
-                    for item in data:
-                        if 'alternativas' in item and 'correta' in item:
-                            alt = item['alternativas']
-                            correta_original = alt.get(item['correta'], '')
-                            keys = list(alt.keys())
-                            random.shuffle(keys)
-                            novas_alt = {k: alt[k] for k in keys}
-                            nova_correta = None
-                            for k, v in novas_alt.items():
-                                if v == correta_original:
-                                    nova_correta = k
-                                    break
-                            item['alternativas'] = novas_alt
-                            item['correta'] = nova_correta if nova_correta else 'a'
-                    return data
+            if not match:
+                logger.warning("IA não retornou JSON array válido.")
+                return None
+
+            data = json.loads(match.group())
+            if not isinstance(data, list) or not data:
+                return None
+
+            if tipo == 'questao':
+                data = [self._normalizar_questao(q) for q in data if isinstance(q, dict)]
+                data = [q for q in data if q is not None]
+                return data if data else None
+
+            return data
+
+        except json.JSONDecodeError as e:
+            logger.error("JSON inválido da IA: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Erro na IA: {e}")
+            logger.error("Erro na IA: %s", e)
             return None
 
+    # ==========================================================
+    # PROMPTS
+    # ==========================================================
+    def _prompt_flashcards(self, texto, quantidade):
+        return f"""Você é um professor especialista em concursos públicos brasileiros.
+Gere {quantidade} flashcards de estudo sobre o TEMA abaixo.
+
+TEMA:
+{texto}
+
+REGRAS:
+- Cada flashcard tem uma pergunta objetiva e uma resposta concisa.
+- Foque em conceitos que realmente caem em prova.
+- Varie: definições, aplicações, comparações, fórmulas.
+
+FORMATO — APENAS JSON puro:
+[
+  {{"pergunta": "texto", "resposta": "texto"}}
+]"""
+
+    def _prompt_questoes(self, texto, quantidade):
+        return f"""Você é um professor especialista em concursos públicos brasileiros.
+Gere EXATAMENTE {quantidade} questões de múltipla escolha, nível médio, sobre o TEMA abaixo.
+
+TEMA:
+{texto}
+
+REGRAS OBRIGATÓRIAS:
+1. Cada questão tem 4 alternativas (a, b, c, d) — apenas UMA correta.
+2. Os distratores devem ser PLAUSÍVEIS: erros comuns, conceitos parecidos, exceções mal aplicadas.
+   NUNCA use "Nenhuma das alternativas" ou "Todas as anteriores".
+3. Varie os tipos de cobrança: definição, aplicação prática, comparação entre conceitos,
+   identificação de erro, situação-problema.
+4. A explicação deve ter 2 partes: por que a correta está certa E por que os distratores estão errados.
+   IMPORTANTE: NÃO mencione letras (a, b, c, d) na explicação. Em vez de
+   "a alternativa (c) está correta", escreva "a alternativa que menciona a mesma
+   chave secreta está correta". Isso é obrigatório porque o sistema embaralha
+   as alternativas depois.
+5. NÃO gere questões meta como "Qual é a ideia central do texto?".
+6. NÃO repita o mesmo assunto em duas questões.
+7. Se o TEMA for apenas um nome (ex: "PF > Informática > Criptografia"),
+   use seu CONHECIMENTO PRÓPRIO sobre o assunto — invente questões reais e cobráveis.
+8. Se o TEMA contiver texto longo, baseie-se NELE, mas não copie literalmente.
+
+FORMATO DE SAÍDA — APENAS JSON puro, sem markdown:
+[
+  {{
+    "enunciado": "texto completo da questão",
+    "alternativas": {{"a": "...", "b": "...", "c": "...", "d": "..."}},
+    "correta": "a",
+    "explicacao": "Explicação completa."
+  }}
+]"""
+
+    # ==========================================================
+    # NORMALIZAÇÃO / EMBARALHAMENTO
+    # ==========================================================
+    def _normalizar_questao(self, q):
+        """Valida e embaralha uma questão. Devolve None se inválida."""
+        if not isinstance(q, dict):
+            return None
+
+        enunciado = (q.get('enunciado') or '').strip()
+        if not enunciado:
+            return None
+
+        alt = q.get('alternativas')
+        if not isinstance(alt, dict):
+            return None
+
+        letras = ['a', 'b', 'c', 'd']
+        for l in letras:
+            if not (alt.get(l) or '').strip():
+                return None
+
+        correta = (q.get('correta') or '').strip().lower()
+        if correta not in letras:
+            return None
+
+        # Descobre o texto da correta antes de embaralhar
+        texto_correta = alt[correta]
+
+        # Embaralha mantendo o mapeamento
+        itens = [(k, v) for k, v in alt.items()]
+        random.shuffle(itens)
+        novas_alt = {letras[i]: v for i, (_, v) in enumerate(itens)}
+
+        nova_correta = None
+        for k, v in novas_alt.items():
+            if v == texto_correta:
+                nova_correta = k
+                break
+
+        return {
+            'enunciado': enunciado,
+            'alternativas': novas_alt,
+            'correta': nova_correta or 'a',
+            'explicacao': (q.get('explicacao') or '').strip(),
+        }
+
+    # ==========================================================
+    # FALLBACK MANUAL — flashcards
+    # ==========================================================
     def _extract_flashcards(self, texto, quantidade):
         logger.info("Extraindo flashcards manualmente.")
         linhas = texto.split('\n')
@@ -103,6 +227,7 @@ class GroqService:
         topicos = {}
         titulo_atual = None
         conteudo_atual = []
+
         for linha in linhas:
             linha = linha.strip()
             if not linha:
@@ -124,10 +249,13 @@ class GroqService:
                         definicao = partes[2].strip()
                         if len(termo) > 3 and len(definicao) > 5:
                             definicoes.append((termo, definicao))
+
         if titulo_atual and conteudo_atual:
             topicos[titulo_atual] = '\n'.join(conteudo_atual)
+
         for termo, definicao in definicoes:
             flashcards.append({'pergunta': f'O que significa "{termo}"?', 'resposta': definicao})
+
         for titulo, conteudo in topicos.items():
             if len(flashcards) >= quantidade:
                 break
@@ -140,6 +268,7 @@ class GroqService:
                 flashcards.append({'pergunta': f'O que é "{titulo}"?', 'resposta': definicao_relacionada})
             elif conteudo and len(conteudo) > 20:
                 flashcards.append({'pergunta': f'Explique o conceito de "{titulo}".', 'resposta': conteudo[:300]})
+
         if len(flashcards) < quantidade:
             for linha in linhas:
                 if len(flashcards) >= quantidade:
@@ -150,21 +279,26 @@ class GroqService:
                     termo = re.sub(r'^[\d\.]+\s*', '', termo.strip())
                     if len(termo) > 3:
                         flashcards.append({'pergunta': f'O que é "{termo}"?', 'resposta': linha})
-        while len(flashcards) < quantidade:
-            flashcards.append({'pergunta': 'Qual é a ideia central do texto?', 'resposta': texto[:150] if texto else 'Texto não fornecido.'})
+
         unicos = []
         perguntas_vistas = set()
         for f in flashcards:
             if f['pergunta'] not in perguntas_vistas and f['resposta'] != '...':
                 perguntas_vistas.add(f['pergunta'])
                 unicos.append(f)
+
         return unicos[:quantidade]
 
+    # ==========================================================
+    # FALLBACK MANUAL — questões
+    # ==========================================================
     def _extract_questoes(self, texto, quantidade):
-        """Extrai questões APENAS de frases completas com 'é' ou 'são'."""
-        logger.info("Extraindo questões do texto (modo limpo).")
-        
-        # Limpeza agressiva: remove títulos, listas, markdown
+        """
+        Extrai questões APENAS de frases completas com 'é' ou 'são'.
+        Não inventa perguntas genéricas — se não encontrar, devolve o que tiver.
+        """
+        logger.info("Extraindo questões do texto (modo manual).")
+
         texto_limpo = re.sub(r'^#.*$', '', texto, flags=re.MULTILINE)
         texto_limpo = re.sub(r'^-.*$', '', texto_limpo, flags=re.MULTILINE)
         texto_limpo = re.sub(r'^>.*$', '', texto_limpo, flags=re.MULTILINE)
@@ -173,16 +307,13 @@ class GroqService:
         texto_limpo = re.sub(r'`(.*?)`', r'\1', texto_limpo)
         texto_limpo = re.sub(r'[“”"\']', '', texto_limpo)
         texto_limpo = re.sub(r'[→▶⇒➔]', '', texto_limpo)
-        
-        # Divide em frases (ponto final ou interrogação)
+
         frases = re.split(r'[.!?]\s+', texto_limpo)
         frases = [f.strip() for f in frases if f.strip()]
-        
-        # Filtra apenas frases com 'é' ou 'são'
+
         definicoes = []
         for frase in frases:
             if ' é ' in frase or ' são ' in frase:
-                # Extrai termo e definição
                 if ' é ' in frase:
                     partes = frase.split(' é ', 1)
                 else:
@@ -190,14 +321,11 @@ class GroqService:
                 if len(partes) == 2:
                     termo = partes[0].strip()
                     definicao = partes[1].strip()
-                    # Filtra: termo curto (<= 5 palavras) e definição longa (> 5 palavras)
                     if len(termo.split()) <= 5 and len(definicao.split()) >= 5:
                         definicoes.append((termo, definicao))
-        
-        # Se não encontrou, tenta extrair de linhas que contêm 'é' ou 'são'
+
         if not definicoes:
-            linhas = texto_limpo.split('\n')
-            for linha in linhas:
+            for linha in texto_limpo.split('\n'):
                 linha = linha.strip()
                 if not linha:
                     continue
@@ -211,30 +339,25 @@ class GroqService:
                         definicao = partes[1].strip()
                         if len(termo.split()) <= 5 and len(definicao.split()) >= 5:
                             definicoes.append((termo, definicao))
-        
-        # Embaralha para variar
+
         random.shuffle(definicoes)
-        selecionadas = definicoes[:quantidade * 2]
-        
-        questoes = []
+        selecionadas = definicoes[:quantidade]
+
         padroes_pergunta = [
-            "O que significa \"{termo}\"?",
-            "Qual é o significado de \"{termo}\"?",
-            "Como se define \"{termo}\"?",
-            "O que quer dizer \"{termo}\"?",
-            "Qual conceito é descrito por \"{termo}\"?"
+            'O que significa "{termo}"?',
+            'Qual é o significado de "{termo}"?',
+            'Como se define "{termo}"?',
+            'O que quer dizer "{termo}"?',
+            'Qual conceito é descrito por "{termo}"?',
         ]
-        
+
+        questoes = []
         for termo, definicao in selecionadas:
-            if len(questoes) >= quantidade:
-                break
             padrao = random.choice(padroes_pergunta)
             enunciado = padrao.format(termo=termo)
-            
-            # Distratores: usa outros termos ou genéricos
-            outros = [t for t, d in definicoes if t != termo][:2]
-            alternativas = {}
-            alternativas['a'] = definicao
+
+            outros = [t for t, _ in definicoes if t != termo][:2]
+            alternativas = {'a': definicao}
             if len(outros) >= 1:
                 alternativas['b'] = f'{outros[0]} é um conceito relacionado, mas não é a definição correta.'
             else:
@@ -244,43 +367,24 @@ class GroqService:
             else:
                 alternativas['c'] = 'Outra definição não relacionada.'
             alternativas['d'] = 'Nenhuma das alternativas está correta.'
-            
-            # Embaralha
+
             keys = list(alternativas.keys())
             random.shuffle(keys)
             novas_alt = {k: alternativas[k] for k in keys}
-            nova_correta = None
-            for k, v in novas_alt.items():
-                if v == definicao:
-                    nova_correta = k
-                    break
-            
+            nova_correta = next((k for k, v in novas_alt.items() if v == definicao), 'a')
+
             questoes.append({
                 'enunciado': enunciado,
                 'alternativas': novas_alt,
-                'correta': nova_correta if nova_correta else 'a',
-                'explicacao': f'A definição correta é: {definicao[:200]}'
+                'correta': nova_correta,
+                'explicacao': f'A definição correta é: {definicao[:200]}',
             })
-        
-        # Se ainda não tem questões, fallback genérico
-        while len(questoes) < quantidade:
-            questoes.append({
-                'enunciado': 'Qual é a ideia central do texto?',
-                'alternativas': {
-                    'a': texto[:50] if texto else 'Texto não fornecido',
-                    'b': 'Texto não fornecido',
-                    'c': 'Nenhuma',
-                    'd': 'Todas'
-                },
-                'correta': 'a',
-                'explicacao': 'A ideia central é extraída do texto.'
-            })
-        
+
         unicos = []
         vistos = set()
         for q in questoes:
             if q['enunciado'] not in vistos:
                 vistos.add(q['enunciado'])
                 unicos.append(q)
-        
+
         return unicos[:quantidade]
