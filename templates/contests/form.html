@@ -1,94 +1,154 @@
 {% extends 'base.html' %}
+
+{% block title %}{% if object %}Editar Estudo{% else %}Novo Estudo{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) opacity(0.6);
+    cursor: pointer;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(1) opacity(1);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header bg-primary text-white">
-        <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>{% if object %}Editar Estudo{% else %}Novo Estudo{% endif %}</h4>
+  <div class="col-12 col-lg-9 col-xl-8">
+
+    <nav class="mb-4">
+      <a href="{% url 'contests:list' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar para Meus Estudos
+      </a>
+    </nav>
+
+    <div class="hero-section">
+      <h1>
+        <i class="bi bi-briefcase me-2" style="color: var(--ls-primary);"></i>
+        {% if object %}Editar Estudo{% else %}Novo Estudo{% endif %}
+      </h1>
+      <p>Preencha os dados do concurso ou objetivo de estudo.</p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors|join:", " }}
       </div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_name" class="form-label">Nome</label>
-                {{ form.name }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_organization" class="form-label">Órgão</label>
-                {{ form.organization }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_position" class="form-label">Cargo</label>
-                {{ form.position }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_main_topic" class="form-label">Tópico principal</label>
-                {{ form.main_topic }}
-                <small class="text-muted">Ex: "Direito Constitucional", "Matemática", etc.</small>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_exam_date" class="form-label">Data da prova</label>
-                {{ form.exam_date }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_expected_date" class="form-label">Data prevista</label>
-                {{ form.expected_date }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_board" class="form-label">Banca</label>
-                {{ form.board }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_status" class="form-label">Status</label>
-                {{ form.status }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_goal_hours" class="form-label">Meta de horas</label>
-                {{ form.goal_hours }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_goal_questions" class="form-label">Meta de questões</label>
-                {{ form.goal_questions }}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="id_priority" class="form-label">Prioridade</label>
-                {{ form.priority }}
-              </div>
-            </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="bi bi-info-circle me-2" style="color: var(--ls-primary);"></i>
+          Identificação
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
             <div class="col-12">
-              <div class="mb-3">
-                <label for="id_notes" class="form-label">Observações</label>
-                {{ form.notes }}
-              </div>
+              <label for="id_name" class="form-label">
+                Nome <span style="color: var(--ls-danger);">*</span>
+              </label>
+              {{ form.name }}
+              {% if form.name.errors %}
+                <div class="alert alert-danger mt-2 mb-0">{{ form.name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="id_organization" class="form-label">{{ form.organization.label }}</label>
+              {{ form.organization }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_position" class="form-label">{{ form.position.label }}</label>
+              {{ form.position }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_board" class="form-label">{{ form.board.label }}</label>
+              {{ form.board }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_main_topic" class="form-label">{{ form.main_topic.label }}</label>
+              {{ form.main_topic }}
+              {% if form.main_topic.help_text %}
+                <small class="text-muted" style="display:block; font-size:0.78rem; margin-top:4px;">
+                  {{ form.main_topic.help_text }}
+                </small>
+              {% endif %}
             </div>
           </div>
-          <button type="submit" class="btn btn-success w-100">Salvar</button>
-        </form>
+        </div>
       </div>
-    </div>
-    <a href="{% url 'contests:list' %}" class="btn btn-secondary mt-3">Voltar</a>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="bi bi-calendar3 me-2" style="color: var(--ls-primary);"></i>
+          Datas
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="id_exam_date" class="form-label">{{ form.exam_date.label }}</label>
+              {{ form.exam_date }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_expected_date" class="form-label">{{ form.expected_date.label }}</label>
+              {{ form.expected_date }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="bi bi-bullseye me-2" style="color: var(--ls-primary);"></i>
+          Metas e prioridade
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="id_goal_hours" class="form-label">{{ form.goal_hours.label }}</label>
+              {{ form.goal_hours }}
+            </div>
+            <div class="col-md-4">
+              <label for="id_goal_questions" class="form-label">{{ form.goal_questions.label }}</label>
+              {{ form.goal_questions }}
+            </div>
+            <div class="col-md-4">
+              <label for="id_priority" class="form-label">{{ form.priority.label }}</label>
+              {{ form.priority }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_status" class="form-label">{{ form.status.label }}</label>
+              {{ form.status }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="bi bi-journal-text me-2" style="color: var(--ls-primary);"></i>
+          {{ form.notes.label }}
+        </div>
+        <div class="card-body">
+          {{ form.notes }}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'contests:list' %}" class="btn btn-secondary">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>
+          {% if object %}Salvar alterações{% else %}Criar estudo{% endif %}
+        </button>
+      </div>
+
+    </form>
   </div>
 </div>
 {% endblock %}

@@ -1,0 +1,87 @@
+{% load static %}
+{% if user.is_authenticated %}
+<div id="study-timer" class="study-timer" data-authenticated="1" data-current-url="{% url 'study:current_session' %}" data-start-url="{% url 'study:start_session' %}" data-pause-url="{% url 'study:pause_session' %}" data-resume-url="{% url 'study:resume_session' %}" data-end-url="{% url 'study:end_session' %}" data-contests-url="{% url 'study:api_contests' %}">
+
+  {# ---------- IDLE ---------- #}
+  <div class="study-timer__idle" data-idle>
+    <button type="button" class="study-timer__start" data-action="open-start-modal">
+      <span class="study-timer__start-icon">
+        <i class="bi bi-play-fill"></i>
+      </span>
+      <span class="study-timer__start-label">Iniciar estudo</span>
+    </button>
+  </div>
+
+  {# ---------- ACTIVE ---------- #}
+  <div class="study-timer__active" data-active hidden>
+    <div class="study-timer__indicator" data-status="running">
+      <span class="study-timer__dot"></span>
+      <span class="study-timer__time" data-elapsed>00:00:00</span>
+    </div>
+
+    <div class="study-timer__meta">
+      <span class="study-timer__subject" data-subject>—</span>
+      <span class="study-timer__topic" data-topic>—</span>
+    </div>
+
+    <div class="study-timer__actions">
+      <button type="button" class="study-timer__action" data-action="pause" title="Pausar" aria-label="Pausar">
+        <i class="bi bi-pause-fill"></i>
+      </button>
+      <button type="button" class="study-timer__action" data-action="resume" title="Retomar" aria-label="Retomar" hidden>
+        <i class="bi bi-play-fill"></i>
+      </button>
+      <button type="button" class="study-timer__action study-timer__action--danger" data-action="finish" title="Finalizar" aria-label="Finalizar">
+        <i class="bi bi-stop-fill"></i>
+      </button>
+    </div>
+  </div>
+
+  {# ---------- MODAL DE INÍCIO ---------- #}
+  <div class="study-timer__modal" data-modal hidden>
+    <div class="study-timer__modal-card" role="dialog" aria-modal="true" aria-labelledby="study-timer-modal-title">
+      <header class="study-timer__modal-header">
+        <h3 id="study-timer-modal-title" class="study-timer__modal-title">
+          <i class="bi bi-book"></i> O que você vai estudar?
+        </h3>
+        <button type="button" class="study-timer__modal-close" data-action="close-modal" aria-label="Fechar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+
+      <div class="study-timer__modal-body">
+        <div class="study-timer__field">
+          <label for="st-contest">Estudo</label>
+          <select id="st-contest" data-select="contest">
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+
+        <div class="study-timer__field">
+          <label for="st-subject">Matéria</label>
+          <select id="st-subject" data-select="subject" disabled>
+            <option value="">Primeiro selecione um estudo</option>
+          </select>
+        </div>
+
+        <div class="study-timer__field">
+          <label for="st-topic">Assunto</label>
+          <select id="st-topic" data-select="topic" disabled>
+            <option value="">Primeiro selecione uma matéria</option>
+          </select>
+        </div>
+      </div>
+
+      <footer class="study-timer__modal-footer">
+        <button type="button" class="study-timer__btn study-timer__btn--ghost" data-action="close-modal">
+          Cancelar
+        </button>
+        <button type="button" class="study-timer__btn study-timer__btn--primary" data-action="start" disabled>
+          <i class="bi bi-play-fill"></i> Começar
+        </button>
+      </footer>
+    </div>
+  </div>
+
+</div>
+{% endif %}

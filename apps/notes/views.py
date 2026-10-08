@@ -4,10 +4,10 @@ import random
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
 from .models import Note, Tag
 from .forms import NoteForm
 from apps.subjects.models import Topic
@@ -183,35 +183,3 @@ def salvar_questoes_nota(request, note_id):
     except Exception as e:
         logger.error(f'Erro ao salvar questões: {e}')
         return JsonResponse({'error': str(e)}, status=500)
-
-# ============================
-# AUTOSAVE (AJAX)
-# ============================
-
-@login_required
-@csrf_exempt
-def autosave_note(request, pk=None):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método não permitido'}, status=405)
-
-    content = request.POST.get('content', '').strip()
-    title = request.POST.get('title', '').strip()
-
-    if not title:
-        return JsonResponse({'error': 'Título é obrigatório'}, status=400)
-
-    if pk:
-        note = get_object_or_404(Note, pk=pk, user=request.user)
-        note.content = content
-        note.title = title
-        note.save()
-        return JsonResponse({'success': True, 'id': note.id})
-    else:
-        topic = Topic.objects.filter(subject__contest__user=request.user).first()
-        note = Note.objects.create(
-            user=request.user,
-            topic=topic,
-            title=title,
-            content=content
-        )
-        return JsonResponse({'success': True, 'id': note.id})
