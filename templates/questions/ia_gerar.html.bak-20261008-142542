@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gerar questões com IA — LS Study{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="bi bi-robot"></i> Gerar questões com IA</h1>
+    <a href="{% url 'questions:bank' %}" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> Voltar ao banco
+    </a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <p class="text-muted mb-4">
+        Escolha um tópico e a IA gera questões de múltipla escolha.
+        Se houver <strong>notas vinculadas</strong> ao tópico, elas são usadas como fonte.
+        Caso contrário, a IA gera questões gerais sobre o tema.
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Concurso</label>
+          <select id="ia-contest" class="form-select">
+            <option value="">Selecione...</option>
+            {% for c in contests %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Matéria</label>
+          <select id="ia-subject" class="form-select" disabled>
+            <option value="">Primeiro selecione um concurso</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Assunto</label>
+          <select id="ia-topic" class="form-select" disabled>
+            <option value="">Primeiro selecione uma matéria</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Quantidade (1 a 10)</label>
+          <input type="number" id="ia-quantidade" class="form-control" value="5" min="1" max="10">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Dificuldade</label>
+          <select id="ia-dificuldade" class="form-select">
+            {% for value, label in difficulty_choices %}
+              <option value="{{ value }}" {% if value == 3 %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Fonte de conteúdo</label>
+          <select id="ia-fonte" class="form-select">
+            <option value="auto">Automático (notas &gt; nome do tópico)</option>
+            <option value="notas">Apenas notas do tópico</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex align-items-center gap-3">
+        <button id="ia-gerar" class="btn btn-primary" disabled>
+          <i class="bi bi-magic"></i> Gerar questões
+        </button>
+        <span id="ia-status" class="text-muted small"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="ia-resultado" class="d-none">
+    <div class="alert alert-success">
+      <i class="bi bi-check-circle"></i>
+      <strong>Sucesso!</strong>
+      <span id="ia-criadas-texto"></span>
+      <a href="{% url 'questions:bank' %}" class="alert-link ms-2">
+        Ver no banco de questões →
+      </a>
+    </div>
+  </div>
+
+  <div id="ia-erro" class="alert alert-danger d-none">
+    <i class="bi bi-exclamation-triangle"></i>
+    <span id="ia-erro-texto"></span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const URLS = {
+    materias: "{% url 'study:api_materias' 0 %}",
+    assuntos: "{% url 'study:api_assuntos' 0 %}",
+    gerar:    "{% url 'questions:ia_gerar_api' %}",
+  };
+
+  const $contest = document.getElementById('ia-contest');
+  const $subject = document.getElementById('ia-subject');
+  const $topic   = document.getElementById('ia-topic');
+  const $quant   = document.getElementById('ia-quantidade');
+  const $dif     = document.getElementById('ia-dificuldade');
+  const $fonte   = document.getElementById('ia-fonte');
+  const $btn     = document.getElementById('ia-gerar');
+  const $status  = document.getElementById('ia-status');
+  const $okBox   = document.getElementById('ia-resultado');
+  const $okTxt   = document.getElementById('ia-criadas-texto');
+  const $errBox  = document.getElementById('ia-erro');
+  const $errTxt  = document.getElementById('ia-erro-texto');
+
+  function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? decodeURIComponent(m.pop()) : '';
+  }
+
+  async function getJson(url) {
+    const r = await fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  function enableButton() {
+    $btn.disabled = !$topic.value;
+  }
+
+  $contest.addEventListener('change', async function () {
+    const id = $contest.value;
+    $subject.disabled = true;
+    $subject.innerHTML = '<option value="">Carregando...</option>';
+    $topic.disabled = true;
+    $topic.innerHTML = '<option value="">Primeiro selecione uma matéria</option>';
+    $btn.disabled = true;
+    if (!id) return;
+
+    try {
+      const list = await getJson(URLS.materias.replace('/0/', '/' + id + '/'));
+      $subject.innerHTML = '<option value="">Selecione...</option>';
+      list.forEach(m => {
+        const o = document.createElement('option');
+        o.value = m.id; o.textContent = m.name;
+        $subject.appendChild(o);
+      });
+      $subject.disabled = false;
+    } catch (e) {
+      $subject.innerHTML = '<option value="">Erro ao carregar</option>';
+      console.error(e);
+    }
+  });
+
+  $subject.addEventListener('change', async function () {
+    const id = $subject.value;
+    $topic.disabled = true;
+    $topic.innerHTML = '<option value="">Carregando...</option>';
+    $btn.disabled = true;
+    if (!id) return;
+
+    try {
+      const list = await getJson(URLS.assuntos.replace('/0/', '/' + id + '/'));
+      $topic.innerHTML = '<option value="">Selecione...</option>';
+      list.forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id; o.textContent = a.name;
+        $topic.appendChild(o);
+      });
+      $topic.disabled = false;
+    } catch (e) {
+      $topic.innerHTML = '<option value="">Erro ao carregar</option>';
+      console.error(e);
+    }
+  });
+
+  $topic.addEventListener('change', enableButton);
+
+  $btn.addEventListener('click', async function () {
+    $okBox.classList.add('d-none');
+    $errBox.classList.add('d-none');
+    $btn.disabled = true;
+    const t0 = Date.now();
+    $status.textContent = '🤖 Gerando... isso pode levar 5 a 15 segundos.';
+    $status.className = 'text-muted small';
+
+    try {
+      const body = new URLSearchParams({
+        topic_id:    $topic.value,
+        quantidade:  $quant.value,
+        dificuldade: $dif.value,
+        fonte:       $fonte.value,
+      });
+
+      const r = await fetch(URLS.gerar, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: body.toString(),
+        credentials: 'same-origin',
+      });
+
+      const data = await r.json();
+      const seg = ((Date.now() - t0) / 1000).toFixed(1);
+
+      if (data.success) {
+        $okTxt.textContent =
+          data.criadas + ' questão(ões) criada(s) em ' + seg + 's ' +
+          (data.fonte_usada === 'notas' ? '(fonte: notas do tópico)' : '(fonte: nome do tópico)') +
+          (data.descartadas ? ' • ' + data.descartadas + ' descartada(s)' : '');
+        $okBox.classList.remove('d-none');
+        $status.textContent = '';
+      } else {
+        $errTxt.textContent = data.error || 'Erro desconhecido.';
+        $errBox.classList.remove('d-none');
+        $status.textContent = '';
+      }
+    } catch (e) {
+      $errTxt.textContent = 'Falha de rede: ' + e.message;
+      $errBox.classList.remove('d-none');
+      $status.textContent = '';
+    } finally {
+      $btn.disabled = !$topic.value;
+    }
+  });
+
+})();
+</script>
+{% endblock %}

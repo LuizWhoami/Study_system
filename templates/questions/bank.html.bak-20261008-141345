@@ -9,8 +9,11 @@
     <a href="{% url 'questions:create' %}" class="btn btn-primary">
       <i class="bi bi-plus-circle me-1"></i> Nova Questão
     </a>
-    <a href="{% url 'questions:ia_gerar' %}" class="btn btn-outline-info">
+    <a href="{% url 'questions:ia_gerar' %}" class="btn btn-info">
       <i class="bi bi-magic me-1"></i> Gerar com IA
+    </a>
+    <a href="{% url 'questions:treino_inteligente' %}" class="btn btn-warning">
+      <i class="bi bi-robot me-1"></i> Treino Inteligente
     </a>
     <a href="{% url 'questions:error_log' %}" class="btn btn-outline-danger">
       <i class="bi bi-journal-x me-1"></i> Caderno de Erros

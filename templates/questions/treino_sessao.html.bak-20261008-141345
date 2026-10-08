@@ -41,7 +41,7 @@
           <input type="hidden" name="tempo" id="tempo" value="0">
           <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary">Responder</button>
-            <a href="{% url 'questions:bank' %}" class="btn btn-secondary">Voltar ao banco</a>
+            <a href="{% url 'questions:treino_inteligente' %}" class="btn btn-secondary">Sair do treino</a>
           </div>
         </form>
 
