@@ -1,0 +1,152 @@
+/* ===== LSStudy — Cronômetro global ===== */
+.study-timer{
+  position:fixed; right:24px; bottom:24px; z-index:900;
+  font-family:var(--font,'Inter',sans-serif);
+  color:var(--text-primary,#fff);
+}
+
+/* ---------- Idle ---------- */
+.study-timer__idle[hidden]{display:none}
+.study-timer__start{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:12px 20px; border:none; border-radius:999px;
+  background:linear-gradient(135deg,#6C63FF 0%,#5A52D5 100%);
+  color:#fff; font-weight:600; font-size:.9rem; cursor:pointer;
+  box-shadow:0 8px 24px rgba(108,99,255,.35),0 2px 6px rgba(0,0,0,.4);
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.study-timer__start:hover{transform:translateY(-1px);
+  box-shadow:0 10px 28px rgba(108,99,255,.5),0 2px 8px rgba(0,0,0,.5)}
+.study-timer__start:active{transform:translateY(0)}
+.study-timer__start-icon{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:50%;
+  background:rgba(255,255,255,.2); font-size:.9rem;
+}
+
+/* ---------- Active ---------- */
+.study-timer__active{
+  display:flex; align-items:center; gap:12px; padding:10px 14px;
+  border-radius:14px; background:rgba(23,23,37,.95);
+  border:1px solid var(--border,#252538);
+  backdrop-filter:blur(12px);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+}
+.study-timer__active[hidden]{display:none}
+.study-timer__indicator{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 12px; border-radius:999px;
+  background:rgba(108,99,255,.15); font-variant-numeric:tabular-nums;
+}
+.study-timer__indicator[data-status="paused"]{background:rgba(245,158,11,.15)}
+.study-timer__dot{
+  width:8px; height:8px; border-radius:50%;
+  background:#6C63FF; box-shadow:0 0 8px rgba(108,99,255,.8);
+  animation:st-pulse 1.6s infinite;
+}
+.study-timer__indicator[data-status="paused"] .study-timer__dot{
+  background:#F59E0B; box-shadow:0 0 8px rgba(245,158,11,.8); animation:none;
+}
+@keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.study-timer__time{
+  font-weight:600; font-size:.95rem; color:#fff; letter-spacing:.02em;
+}
+.study-timer__meta{
+  display:flex; flex-direction:column; line-height:1.2;
+  max-width:200px; min-width:0;
+}
+.study-timer__subject{
+  font-size:.72rem; color:var(--text-tertiary,#A0A8C0);
+  text-transform:uppercase; letter-spacing:.05em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.study-timer__topic{
+  font-size:.85rem; color:#fff; font-weight:500;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.study-timer__actions{display:inline-flex; gap:6px; margin-left:4px}
+.study-timer__action{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border:none; border-radius:50%;
+  background:rgba(255,255,255,.06); color:var(--text-secondary,#D0D4E8);
+  cursor:pointer; font-size:1rem;
+  transition:background .15s ease,color .15s ease,transform .1s ease;
+}
+.study-timer__action:hover{background:rgba(255,255,255,.12); color:#fff}
+.study-timer__action:active{transform:scale(.95)}
+.study-timer__action--danger:hover{background:rgba(239,68,68,.2); color:#fca5a5}
+
+/* ---------- Modal ---------- */
+.study-timer__modal{
+  position:fixed; inset:0; z-index:1050;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+  animation:st-fade .15s ease;
+}
+.study-timer__modal[hidden]{display:none}
+@keyframes st-fade{from{opacity:0}to{opacity:1}}
+.study-timer__modal-card{
+  width:100%; max-width:440px; background:#171725;
+  border:1px solid #252538; border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6); color:#D0D4E8;
+  animation:st-slide-up .2s ease;
+}
+@keyframes st-slide-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.study-timer__modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid #252538;
+}
+.study-timer__modal-title{
+  margin:0; font-size:1rem; font-weight:600; color:#fff;
+  display:flex; align-items:center; gap:8px;
+}
+.study-timer__modal-title i{color:#6C63FF}
+.study-timer__modal-close{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border:none; border-radius:8px;
+  background:transparent; color:#A0A8C0; cursor:pointer; font-size:1rem;
+  transition:background .15s ease,color .15s ease;
+}
+.study-timer__modal-close:hover{background:rgba(255,255,255,.06); color:#fff}
+.study-timer__modal-body{
+  padding:20px; display:flex; flex-direction:column; gap:14px;
+}
+.study-timer__field{display:flex; flex-direction:column; gap:6px}
+.study-timer__field label{font-size:.8rem; font-weight:500; color:#D0D4E8}
+.study-timer__field select{
+  width:100%; padding:10px 12px;
+  background:rgba(255,255,255,.03); border:1px solid #252538;
+  border-radius:8px; color:#fff; font-size:.9rem; cursor:pointer;
+  transition:border-color .15s ease,background .15s ease;
+}
+.study-timer__field select:focus{
+  outline:none; border-color:#6C63FF;
+  box-shadow:0 0 0 3px rgba(108,99,255,.15);
+}
+.study-timer__field select:disabled{opacity:.5; cursor:not-allowed}
+.study-timer__modal-footer{
+  display:flex; justify-content:flex-end; gap:8px;
+  padding:14px 20px; border-top:1px solid #252538;
+}
+.study-timer__btn{
+  padding:10px 18px; border:none; border-radius:999px;
+  font-weight:600; font-size:.85rem; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:transform .1s ease,background .15s ease;
+}
+.study-timer__btn--ghost{
+  background:transparent; color:#D0D4E8; border:1px solid #252538;
+}
+.study-timer__btn--ghost:hover{background:rgba(255,255,255,.04); color:#fff}
+.study-timer__btn--primary{background:#6C63FF; color:#fff}
+.study-timer__btn--primary:hover:not(:disabled){
+  background:#5A52D5; transform:translateY(-1px);
+}
+.study-timer__btn--primary:disabled{opacity:.4; cursor:not-allowed}
+
+/* ---------- Mobile ---------- */
+@media (max-width:640px){
+  .study-timer{right:12px; bottom:12px; left:12px}
+  .study-timer__active{width:100%}
+  .study-timer__meta{max-width:none; flex:1}
+}

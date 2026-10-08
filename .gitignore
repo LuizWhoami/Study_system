@@ -4,38 +4,21 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
+env/
 ENV/
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
 
 # Django
 *.log
 *.pot
-*.pyc
-*.pyo
-*.sqlite3
-*.sqlite
 db.sqlite3
 db.sqlite3-journal
 /media/
 /staticfiles/
-/static/
-/media/
+# ⚠️  /static/ NÃO é ignorado — são arquivos fonte
 
 # Ambiente
 .env
@@ -49,13 +32,15 @@ db.sqlite3-journal
 *.swo
 *~
 .DS_Store
-*.bak
 
-# Backup
-*.backup
+# Backups e temporários
 *.bak
+*.bak-*
+*.bak_*
 *.old
-
-# Migrations (opcional – remova se quiser versionar)
-# */migrations/*.py
-# !*/migrations/__init__.py
+*.old-*
+*.removed
+*.removed-*
+*.pre-*
+*.pre_*
+*.backup
