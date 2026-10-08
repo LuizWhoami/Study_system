@@ -537,6 +537,7 @@ def ia_gerar_api(request):
         return JsonResponse({'success': False, 'error': 'Valores numéricos inválidos.'}, status=400)
 
     fonte = request.POST.get('fonte', 'auto')
+    banca = (request.POST.get('banca') or '').strip() or None
 
     try:
         topic = Topic.objects.select_related('subject', 'subject__contest').get(
@@ -552,6 +553,7 @@ def ia_gerar_api(request):
             quantidade=quantidade,
             dificuldade=dificuldade,
             fonte=fonte,
+            banca=banca,
         )
     except RuntimeError as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=400)
@@ -576,4 +578,5 @@ def ia_gerar_api(request):
         'descartadas': resultado['descartadas'],
         'question_ids': [q.id for q in criadas],
         'fonte_usada': resultado['fonte_usada'],
+        'banca': banca or 'genérica',
     })

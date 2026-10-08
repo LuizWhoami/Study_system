@@ -21,6 +21,39 @@ logger = logging.getLogger(__name__)
 MODEL = "openai/gpt-oss-120b"
 
 
+# ============================================================
+# ESTILOS DE BANCA — usados no prompt para a IA imitar o padrão
+# ============================================================
+BANCA_STYLES = {
+    'CESPE': 'Enunciado LONGO (3-5 linhas) com afirmação técnica densa. Estilo '
+             'Certo/Errado, mas ADAPTADO para múltipla escolha: a alternativa correta é '
+             'uma afirmação verdadeira e detalhada; os distratores são afirmações '
+             'parecidas mas com UMA palavra trocada (inversão de sujeito/objeto, "sempre" '
+             'por "nunca", exceção virada em regra). Sem contexto de empresa; vai direto '
+             'ao conceito.',
+    'CEBRASPE': 'Mesmo estilo CESPE (a mesma banca, nome atual).',
+    'FCC': 'Múltipla escolha clássica. Enunciado formal, longo, contexto encadeado. '
+           'Distratores muito próximos entre si (vírgula muda o sentido). Cobra letra '
+           'de lei e jurisprudência. 4 alternativas (a-d).',
+    'FGV': 'Situação-problema com contexto realista (empresa, caso concreto). Alta '
+           'interpretação de texto. Raramente cobra decoreba direta. Alternativas (a-d) '
+           'com uma correta e distratores plausíveis por interpretação.',
+    'VUNESP': 'Direto, objetivo, pouco texto. Cobra literalidade com uma pitada de '
+              'aplicação. 4 alternativas (a-d), distratores simples. Estilo "sala de aula".',
+    'IBFC': 'Técnico e factual. Cobra definições exatas, listas, prazos. Alternativas '
+            'curtas. 4 opções (a-d).',
+    'IDECAN': 'Estilo técnico com foco em interpretação moderada. 4 alternativas (a-d).',
+    'QUADRIX': 'Foco em detalhe e literalidade. Costuma repetir a mesma estrutura em '
+               'várias questões. 4 alternativas (a-d).',
+    'AOCP': 'Contextualizações longas, porém com pergunta objetiva. 4 alternativas (a-d).',
+    'IBADE': 'Enunciado curto e cobrança direta de lei/regra. 4 alternativas (a-d).',
+    'FUNCERN': 'Estilo técnico, cobrança literal. 4 alternativas (a-d).',
+    'CONSULPLAN': 'Contextualiza bastante, estilo FCC mais enxuto. 4 alternativas (a-d).',
+    'INSTITUTO AOCP': 'Mesmo estilo AOCP.',
+}
+
+
+
 class GroqService:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
@@ -50,9 +83,9 @@ class GroqService:
             logger.warning("IA não retornou flashcards, usando fallback.")
         return self._extract_flashcards(texto, quantidade)
 
-    def gerar_questoes(self, texto, quantidade=3):
+    def gerar_questoes(self, texto, quantidade=3, banca=None):
         if self.enabled and texto and len(texto.strip()) >= 20:
-            questoes = self._gerar_com_ia(texto, quantidade, tipo='questao')
+            questoes = self._gerar_com_ia(texto, quantidade, tipo='questao', banca=banca)
             if questoes:
                 return questoes
             logger.warning("IA não retornou questões, usando fallback manual.")
@@ -61,14 +94,16 @@ class GroqService:
     # ==========================================================
     # CHAMADA À IA
     # ==========================================================
-    def _gerar_com_ia(self, texto, quantidade, tipo='flashcard'):
+    def _gerar_com_ia(self, texto, quantidade, tipo='flashcard', banca=None):
         try:
             if tipo == 'flashcard':
                 prompt = self._prompt_flashcards(texto, quantidade)
                 max_tokens = 800
             else:
-                prompt = self._prompt_questoes(texto, quantidade)
-                max_tokens = 2000
+                prompt = self._prompt_questoes(texto, quantidade, banca=banca)
+                # ~800 tokens por questão (enunciado + 4 alternativas + explicação)
+                # + margem para estilos de banca verbosos (CESPE, FCC)
+                max_tokens = max(2000, quantidade * 900)
 
             response = self.client.chat.completions.create(
                 model=MODEL,
@@ -98,7 +133,18 @@ class GroqService:
                 logger.warning("IA não retornou JSON array válido.")
                 return None
 
-            data = json.loads(match.group())
+            json_str = match.group()
+
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                logger.warning("JSON inválido (%s). Tentando recuperar truncado...", e)
+                data = self._recover_truncated_json(json_str)
+                if not data:
+                    logger.error("Não foi possível recuperar o JSON.")
+                    return None
+                logger.info("Recuperadas %d questão(ões) do JSON truncado.", len(data))
+
             if not isinstance(data, list) or not data:
                 return None
 
@@ -136,12 +182,31 @@ FORMATO — APENAS JSON puro:
   {{"pergunta": "texto", "resposta": "texto"}}
 ]"""
 
-    def _prompt_questoes(self, texto, quantidade):
+    def _prompt_questoes(self, texto, quantidade, banca=None):
+        estilo_banca = ''
+        if banca:
+            descricao = BANCA_STYLES.get(
+                banca.upper().strip(),
+                None,
+            )
+            if descricao:
+                estilo_banca = (
+                    f"\n\nESTILO DA BANCA ({banca}):\n{descricao}\n"
+                    f"Mimetize este estilo com fidelidade. É a marca registrada da banca."
+                )
+            else:
+                estilo_banca = (
+                    f"\n\nESTILO DA BANCA ({banca}):\n"
+                    f"Imite o padrão típico desta banca brasileira (enunciado, "
+                    f"distratores, tipo de cobrança)."
+                )
+
         return f"""Você é um professor especialista em concursos públicos brasileiros.
 Gere EXATAMENTE {quantidade} questões de múltipla escolha, nível médio, sobre o TEMA abaixo.
 
 TEMA:
 {texto}
+{estilo_banca}
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão tem 4 alternativas (a, b, c, d) — apenas UMA correta.

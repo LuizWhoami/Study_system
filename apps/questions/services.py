@@ -59,7 +59,7 @@ def _coletar_texto_fonte(topic, fonte='auto'):
 # ============================================================
 
 @transaction.atomic
-def gerar_e_salvar_questoes_ia(user, topic, quantidade=5, dificuldade=3, fonte='auto'):
+def gerar_e_salvar_questoes_ia(user, topic, quantidade=5, dificuldade=3, fonte='auto', banca=None):
     """
     Gera questões via Groq e persiste como `Question`.
     """
@@ -74,7 +74,25 @@ def gerar_e_salvar_questoes_ia(user, topic, quantidade=5, dificuldade=3, fonte='
             'Serviço de IA desabilitado. Verifique se GROQ_API_KEY está configurada.'
         )
 
-    questoes_raw = service.gerar_questoes(texto_fonte, quantidade=quantidade)
+    questoes_raw = service.gerar_questoes(texto_fonte, quantidade=quantidade, banca=banca)
+
+    # Fallback: se a banca quebrou a geração, tenta de novo sem ela
+    if not questoes_raw and banca:
+        logger.warning(
+            "Geração com banca=%s retornou vazio. Tentando sem banca...",
+            banca,
+        )
+        questoes_raw = service.gerar_questoes(
+            texto_fonte, quantidade=quantidade, banca=None,
+        )
+        if questoes_raw:
+            logger.info(
+                "Fallback sem banca funcionou (%d questões). "
+                "Marcando banca como 'genérica'.",
+                len(questoes_raw),
+            )
+            banca = None
+
     if not questoes_raw:
         raise RuntimeError(
             'A IA não retornou questões. Tente novamente ou adicione mais conteúdo ao tópico.'
@@ -124,6 +142,7 @@ def gerar_e_salvar_questoes_ia(user, topic, quantidade=5, dificuldade=3, fonte='
                 alternativa_correta=correta,
                 explicacao=(q.get('explicacao') or '').strip(),
                 dificuldade=dificuldade,
+                banca=(banca or '')[:100],
                 status=True,
             )
         except Exception as exc:

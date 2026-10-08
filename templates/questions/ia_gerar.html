@@ -63,6 +63,24 @@
             <option value="notas">Apenas notas do tópico</option>
           </select>
         </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Banca (estilo)</label>
+          <select id="ia-banca" class="form-select">
+            <option value="">Genérico (sem estilo específico)</option>
+            <option value="CESPE">CESPE / CEBRASPE</option>
+            <option value="FCC">FCC</option>
+            <option value="FGV">FGV</option>
+            <option value="VUNESP">VUNESP</option>
+            <option value="IBFC">IBFC</option>
+            <option value="IDECAN">IDECAN</option>
+            <option value="QUADRIX">QUADRIX</option>
+            <option value="AOCP">AOCP</option>
+            <option value="IBADE">IBADE</option>
+            <option value="FUNCERN">FUNCERN</option>
+            <option value="CONSULPLAN">CONSULPLAN</option>
+          </select>
+        </div>
       </div>
 
       <div class="mt-4 d-flex align-items-center gap-3">
@@ -108,6 +126,7 @@
   const $quant   = document.getElementById('ia-quantidade');
   const $dif     = document.getElementById('ia-dificuldade');
   const $fonte   = document.getElementById('ia-fonte');
+  const $banca   = document.getElementById('ia-banca');
   const $btn     = document.getElementById('ia-gerar');
   const $status  = document.getElementById('ia-status');
   const $okBox   = document.getElementById('ia-resultado');
@@ -195,6 +214,7 @@
         quantidade:  $quant.value,
         dificuldade: $dif.value,
         fonte:       $fonte.value,
+        banca:       $banca.value,
       });
 
       const r = await fetch(URLS.gerar, {
@@ -215,6 +235,7 @@
         $okTxt.textContent =
           data.criadas + ' questão(ões) criada(s) em ' + seg + 's ' +
           (data.fonte_usada === 'notas' ? '(fonte: notas do tópico)' : '(fonte: nome do tópico)') +
+          (data.banca && data.banca !== 'genérica' ? ' • estilo: ' + data.banca : '') +
           (data.descartadas ? ' • ' + data.descartadas + ' descartada(s)' : '');
         $okBox.classList.remove('d-none');
         $status.textContent = '';
