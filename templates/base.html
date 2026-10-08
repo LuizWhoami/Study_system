@@ -47,9 +47,6 @@
       <a href="{% url 'calendar:calendar' %}" class="{% if 'calendar' in request.resolver_match.app_name %}active{% endif %}">
         <i class="bi bi-calendar3"></i> Calendário
       </a>
-      <a href="{% url 'study_config:stats' %}" class="{% if 'stats' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-bar-chart"></i> Estatísticas
-      </a>
       <a href="{% url 'study_config:config' %}" class="{% if 'config' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-gear"></i> Configurações
       </a>
@@ -105,44 +102,3 @@
   {% block extra_js %}{% endblock %}
 </body>
 </html>
-<!-- FORÇAR CORES CLARAS (FALLBACK) -->
-<style>
-  body, .card, .list-group-item, .navbar-top, .modal-content, .dropdown-menu,
-  h1, h2, h3, h4, h5, h6, p, span, div, a, li, td, th, label, .form-control, .form-select,
-  .text-muted, .text-secondary, .text-tertiary {
-    color: #FFFFFF !important;
-  }
-  .text-muted { color: #B0B8D0 !important; }
-  .card .card-title { color: #B0B8D0 !important; }
-  .navbar-top .navbar-links a { color: #D0D4E8 !important; }
-  .navbar-top .navbar-links a:hover { color: #FFFFFF !important; }
-  .navbar-top .user-badge { color: #D0D4E8 !important; }
-  .navbar-top .btn-logout { color: #D0D4E8 !important; }
-  .navbar-top .btn-logout:hover { color: #FFFFFF !important; }
-  .form-control, .form-select { color: #FFFFFF !important; background: rgba(255,255,255,0.04) !important; }
-  .form-control::placeholder { color: #A0A8C0 !important; }
-  .form-label { color: #D0D4E8 !important; }
-  .badge-secondary { color: #B0B8D0 !important; }
-  .list-group-item { color: #D0D4E8 !important; }
-  .list-group-item:hover { color: #FFFFFF !important; }
-  .alert { color: #FFFFFF !important; }
-  .alert-success { color: #22C55E !important; }
-  .alert-danger { color: #EF4444 !important; }
-  .alert-warning { color: #F59E0B !important; }
-  .alert-info { color: #00D2FF !important; }
-  .modal-title { color: #FFFFFF !important; }
-  .modal-content { color: #D0D4E8 !important; }
-  .dropdown-item { color: #D0D4E8 !important; }
-  .dropdown-item:hover { color: #FFFFFF !important; }
-  .table { color: #D0D4E8 !important; }
-  .table th { color: #FFFFFF !important; }
-  .table td { color: #D0D4E8 !important; }
-  .pagination .page-link { color: #D0D4E8 !important; }
-  .pagination .page-link:hover { color: #FFFFFF !important; }
-  .nav-tabs .nav-link { color: #D0D4E8 !important; }
-  .nav-tabs .nav-link.active { color: #FFFFFF !important; }
-  .card * { color: inherit !important; }
-  .card .card-body * { color: inherit !important; }
-  a { color: #8B83FF !important; }
-  a:hover { color: #A89BFF !important; }
-</style>

@@ -1,14 +1,79 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.utils import timezone
 from datetime import datetime, timedelta, date
-from .models import StudyDay
-from apps.study.models import StudyContent
-from apps.subjects.models import Topic
 import logging
+
+from .models import StudyDay
+from apps.study.models import StudyContent, StudySession
+from apps.subjects.models import Topic
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================
+# CONTEXTO DE ESTATÍSTICAS (movido de study_config.stats_view)
+# ============================================================
+def _build_stats_context(user):
+    """Monta o dicionário de estatísticas usado no template."""
+    from apps.flashcards.models import Flashcard
+    from apps.questions.models import Question
+    from apps.study_config.models import StudyConfig
+
+    today = timezone.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+
+    # Sessões
+    sessions = StudySession.objects.filter(user=user)
+    total_hours = sum(s.duration_minutes for s in sessions) / 60 if sessions else 0
+    sessions_week = sessions.filter(start_time__date__gte=start_of_week)
+    hours_week = sum(s.duration_minutes for s in sessions_week) / 60 if sessions_week else 0
+
+    # Progresso por matéria
+    contents = StudyContent.objects.filter(user=user)
+    subjects_progress = {}
+    for c in contents:
+        subject_name = c.topic.subject.name
+        if subject_name not in subjects_progress:
+            subjects_progress[subject_name] = {'total': 0, 'reviewed': 0}
+        subjects_progress[subject_name]['total'] += 1
+        if c.review_count > 0:
+            subjects_progress[subject_name]['reviewed'] += 1
+
+    pending_reviews = contents.filter(next_review__lte=today + timedelta(days=3))
+
+    # Flashcards / questões
+    flashcards_total = Flashcard.objects.filter(user=user).count()
+    flashcards_pending = Flashcard.objects.filter(
+        user=user, proxima_revisao__lte=today
+    ).count()
+    questions_total = Question.objects.filter(user=user).count()
+
+    # Meta semanal
+    config = StudyConfig.objects.filter(user=user, is_active=True).first()
+    target_hours = float(config.target_hours_week) if config and config.target_hours_week else 15.0
+
+    last_sessions = sessions.order_by('-start_time')[:5]
+
+    return {
+        'total_hours': round(total_hours, 1),
+        'hours_week': round(hours_week, 1),
+        'subjects_progress': subjects_progress,
+        'pending_reviews_count': pending_reviews.count(),
+        'flashcards_total': flashcards_total,
+        'flashcards_pending': flashcards_pending,
+        'questions_total': questions_total,
+        'target_hours': target_hours,
+        'hours_progress': min(100, int((hours_week / target_hours) * 100)) if target_hours > 0 else 0,
+        'config_active': config is not None,
+        'last_sessions': last_sessions,
+    }
+
+
+# ============================================================
+# CALENDÁRIO
+# ============================================================
 @login_required
 def calendar_view(request):
     today = date.today()
@@ -64,7 +129,11 @@ def calendar_view(request):
         'next_week': next_week.strftime('%Y-%m-%d'),
         'today': today,
     }
+    # Adiciona estatísticas ao contexto (fundidas)
+    context.update(_build_stats_context(request.user))
+
     return render(request, 'calendar/calendar.html', context)
+
 
 @login_required
 def set_activity(request):
@@ -83,25 +152,20 @@ def set_activity(request):
     except ValueError:
         return JsonResponse({'error': 'Data inválida'}, status=400)
 
-    # Se for 'none', remove o dia e também as revisões associadas
     if activity == 'none':
         StudyDay.objects.filter(user=request.user, date=day_date).delete()
-        # Remove qualquer StudyContent com next_review nesta data
         StudyContent.objects.filter(user=request.user, next_review=day_date).delete()
         logger.info(f"Atividade e revisões removidas para {day_date}")
         return JsonResponse({'success': True, 'cleared': True})
 
-    # Salva ou atualiza StudyDay
     obj, created = StudyDay.objects.update_or_create(
         user=request.user,
         date=day_date,
         defaults={'activity': activity, 'notes': notes}
     )
 
-    # Se atividade for "review", cria/atualiza StudyContent com a data
     if activity == 'review':
         user = request.user
-        # Busca um tópico que o usuário já tenha estudado ou qualquer tópico
         existing_content = StudyContent.objects.filter(user=user).order_by('next_review').first()
         if existing_content:
             topic = existing_content.topic

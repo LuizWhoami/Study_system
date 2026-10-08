@@ -162,7 +162,7 @@
                     <span class="badge bg-danger">Domínio: {{ weak.mastery }}%</span>
                     <span class="badge bg-secondary">Prioridade: {{ weak.priority }}</span>
                   </div>
-                  <a href="{% url 'questions:treino_inteligente' %}?topic={{ weak.topic.id }}" class="btn btn-sm btn-outline-primary mt-2">Treinar</a>
+                  <a href="{% url 'questions:bank' %}?topic={{ weak.topic.id }}" class="btn btn-sm btn-outline-primary mt-2">Ver questões</a>
                 </div>
               </div>
             {% endfor %}
