@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% block title %}Importar Questões{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="text-light mb-0"><i class="bi bi-upload me-2"></i>Importar Questões</h2>
+  <a href="{% url 'questions:bank' %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+  </div>
+{% endif %}
+
+{% if result %}
+  <div class="alert {% if result.invalid == 0 %}alert-success{% else %}alert-warning{% endif %}">
+    <strong>{{ result.total }}</strong> linha(s) lida(s) —
+    <strong class="text-success">{{ result.valid }}</strong> válida(s),
+    <strong class="text-danger">{{ result.invalid }}</strong> com erro.
+    {% if result.invalid > 0 %}
+      Nenhuma questão foi gravada. Corrija o CSV e reenvie.
+    {% endif %}
+  </div>
+
+  {% if result.invalid > 0 %}
+    <div class="card bg-dark text-light border-secondary mb-4">
+      <div class="card-header border-secondary">
+        <strong>❌ Erros encontrados</strong>
+      </div>
+      <div class="card-body">
+        <table class="table table-dark table-sm align-middle mb-0">
+          <thead>
+            <tr><th style="width:70px">Linha</th><th>Problema</th></tr>
+          </thead>
+          <tbody>
+            {% for row in result.rows %}
+              {% if not row.valid %}
+                <tr>
+                  <td><code>{{ row.line }}</code></td>
+                  <td class="text-danger small">{{ row.errors|join:"; " }}</td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+
+<div class="card bg-dark text-light border-secondary">
+  <div class="card-body">
+    <p class="text-muted mb-3">
+      Envie um arquivo <strong>CSV</strong> (UTF-8 ou Latin-1) com o cabeçalho abaixo.
+      A primeira linha <em>precisa</em> ser exatamente essa.
+    </p>
+
+    <pre class="bg-black text-success p-2 rounded small mb-3">{{ csv_exemplo }}</pre>
+
+    <ul class="text-muted small">
+      <li><strong>Obrigatórias:</strong> <code>enunciado</code>, <code>alternativa_a..d</code>, <code>correta</code> (a/b/c/d)</li>
+      <li><strong>Opcionais:</strong> <code>explicacao</code>, <code>banca</code>, <code>ano</code>, <code>dificuldade</code> (1-5), <code>topic_id</code></li>
+      <li>Se <code>topic_id</code> não vier, a questão vai para o <strong>Tópico padrão</strong> escolhido abaixo.</li>
+      <li>Arquivo máximo: 5 MB.</li>
+    </ul>
+
+    <form method="post" enctype="multipart/form-data" class="mt-3">
+      {% csrf_token %}
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Concurso (para o fallback)</label>
+          <select id="imp-contest" class="form-select bg-dark text-light border-secondary">
+            <option value="">—</option>
+            {% for c in contests %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Matéria</label>
+          <select id="imp-subject" class="form-select bg-dark text-light border-secondary" disabled>
+            <option value="">Selecione um concurso</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Tópico padrão (fallback)</label>
+          <select name="fallback_topic" id="imp-topic" class="form-select bg-dark text-light border-secondary" disabled>
+            <option value="">Selecione uma matéria</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Arquivo CSV</label>
+        <input type="file" name="arquivo" accept=".csv,text/csv" required
+               class="form-control bg-dark text-light border-secondary">
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-upload me-1"></i>Importar
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const URL_MATERIAS = "{% url 'study:api_materias' 0 %}";
+  const URL_ASSUNTOS = "{% url 'study:api_assuntos' 0 %}";
+
+  const $c = document.getElementById('imp-contest');
+  const $s = document.getElementById('imp-subject');
+  const $t = document.getElementById('imp-topic');
+
+  function getJSON(url) {
+    return fetch(url, {credentials:'same-origin', headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r => r.json());
+  }
+
+  $c.addEventListener('change', () => {
+    const id = $c.value;
+    $s.disabled = true; $s.innerHTML = '<option value="">Carregando...</option>';
+    $t.disabled = true; $t.innerHTML = '<option value="">Selecione uma matéria</option>';
+    if (!id) return;
+    getJSON(URL_MATERIAS.replace('/0/', '/' + id + '/')).then(list => {
+      $s.innerHTML = '<option value="">Selecione...</option>';
+      list.forEach(m => $s.insertAdjacentHTML('beforeend', `<option value="${m.id}">${m.name}</option>`));
+      $s.disabled = false;
+    }).catch(() => { $s.innerHTML = '<option value="">Erro</option>'; });
+  });
+
+  $s.addEventListener('change', () => {
+    const id = $s.value;
+    $t.disabled = true; $t.innerHTML = '<option value="">Carregando...</option>';
+    if (!id) return;
+    getJSON(URL_ASSUNTOS.replace('/0/', '/' + id + '/')).then(list => {
+      $t.innerHTML = '<option value="">Selecione...</option>';
+      list.forEach(a => $t.insertAdjacentHTML('beforeend', `<option value="${a.id}">${a.name}</option>`));
+      $t.disabled = false;
+    }).catch(() => { $t.innerHTML = '<option value="">Erro</option>'; });
+  });
+})();
+</script>
+{% endblock %}

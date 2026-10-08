@@ -507,12 +507,67 @@ def performance(request):
 
 @login_required
 def import_questions(request):
-    return HttpResponse('Importação de questões ainda não implementada.', status=501)
+    """
+    Importação de questões via CSV.
 
+    Fluxo:
+      GET  → mostra formulário (upload + select de tópico fallback)
+      POST → parseia o CSV, valida cada linha, mostra relatório.
+             Se não houver nenhum erro, grava tudo e redireciona.
 
-# ============================================================
-# GERAÇÃO DE QUESTÕES COM IA (Groq)
-# ============================================================
+    Cabeçalho esperado:
+      enunciado,alternativa_a,alternativa_b,alternativa_c,alternativa_d,
+      correta,explicacao,banca,ano,dificuldade,topic_id
+    """
+    from .importers import parse_csv, save_valid_rows, CSVImportError
+
+    contests = Contest.objects.filter(user=request.user).order_by('name')
+
+    context = {
+        'contests': contests,
+        'result':   None,
+        'error':    None,
+        'csv_exemplo': (
+            'enunciado,alternativa_a,alternativa_b,alternativa_c,alternativa_d,'
+            'correta,explicacao,banca,ano,dificuldade,topic_id'
+        ),
+    }
+
+    if request.method != 'POST':
+        return render(request, 'questions/import.html', context)
+
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        context['error'] = 'Nenhum arquivo enviado.'
+        return render(request, 'questions/import.html', context)
+
+    # Tópico fallback (opcional)
+    fallback_topic = None
+    topic_id = request.POST.get('fallback_topic')
+    if topic_id:
+        from apps.subjects.models import Topic
+        fallback_topic = Topic.objects.filter(
+            id=topic_id, subject__contest__user=request.user
+        ).first()
+
+    # Parse
+    try:
+        result = parse_csv(arquivo, request.user, fallback_topic=fallback_topic)
+    except CSVImportError as exc:
+        context['error'] = str(exc)
+        return render(request, 'questions/import.html', context)
+
+    # Se tudo válido → grava e redireciona
+    if result.invalid == 0 and result.valid > 0:
+        from django.db import transaction
+        with transaction.atomic():
+            criadas = save_valid_rows(result.rows, request.user)
+        messages.success(request, f'{criadas} questão(ões) importada(s) com sucesso!')
+        return redirect('questions:bank')
+
+    # Senão → mostra relatório com erros
+    context['result'] = result
+    return render(request, 'questions/import.html', context)
 
 @login_required
 def ia_gerar_page(request):
