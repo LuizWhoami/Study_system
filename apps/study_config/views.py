@@ -116,11 +116,35 @@ def save_config(request):
         selected_ids = data.get('selected_contests', [])
         config.selected_contests.set(selected_ids)
         
-        # Etapa 3: Disponibilidade (nova estrutura)
-        config.availability = data.get('availability', [])
-        # Manter campos legados (opcional)
-        config.available_days = [d['day'] for d in config.availability if d.get('day')]
-        config.hours_per_day = Decimal(str(data.get('hours_per_day', 3)))
+        # Etapa 3: Disponibilidade
+        # Aceita 2 formatos:
+        #   1) availability: [{day, periods}, ...]   (formato novo)
+        #   2) available_days + hours_per_day         (formato atual do frontend)
+        availability_in = data.get('availability') or []
+        available_days_in = data.get('available_days') or []
+        hours_per_day = float(data.get('hours_per_day', 3) or 3)
+
+        if availability_in:
+            # Formato novo — usa direto
+            config.availability = availability_in
+            config.available_days = [d['day'] for d in availability_in if d.get('day')]
+        elif available_days_in:
+            # Formato do frontend atual — deriva availability a partir de available_days + hours_per_day
+            start_dt = datetime(2000, 1, 1, 19, 0)
+            end_dt = start_dt + timedelta(hours=hours_per_day)
+            period = {
+                'start': start_dt.strftime('%H:%M'),
+                'end': end_dt.strftime('%H:%M'),
+            }
+            config.availability = [
+                {'day': d, 'periods': [period]} for d in available_days_in
+            ]
+            config.available_days = list(available_days_in)
+        else:
+            config.availability = []
+            config.available_days = []
+
+        config.hours_per_day = Decimal(str(hours_per_day))
         config.days_per_week = len(config.available_days)
         config.study_weekend = data.get('study_weekend', False)
         
