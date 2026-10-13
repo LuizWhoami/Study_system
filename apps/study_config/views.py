@@ -81,13 +81,25 @@ def preview_config(request):
         else:
             strategy['recommendation'] = "Distribuição equilibrada entre todas as matérias."
 
+        # Serializa weak_topics — remove objetos Topic (não são JSON serializáveis)
+        weak_topics_serializados = [
+            {
+                'topic_id': wt['topic'].id,
+                'topic_name': wt['topic'].name,
+                'subject_name': wt['topic'].subject.name,
+                'mastery': wt['mastery'],
+                'priority': wt['priority'],
+            }
+            for wt in weak_topics
+        ]
+
         response = {
             'total_hours': target_hours,
             'selected_count': len(selected_ids),
             'conflicts': conflicts,
             'has_conflicts': len(conflicts) > 0,
             'is_valid': len(conflicts) == 0 and len(selected_ids) > 0,
-            'weak_topics': weak_topics,
+            'weak_topics': weak_topics_serializados,
             'strategy': strategy,
         }
         return JsonResponse(response)
