@@ -46,6 +46,16 @@ class PlanningService:
         self.config.strategy = strategy
         self.config.save()
 
+        # Remove sessões futuras ainda no estado 'planned' antes de gerar as novas,
+        # para evitar duplicação quando o usuário salva o wizard mais de uma vez.
+        # Preserva sessões concluídas/puladas/reagendadas (histórico).
+        PlannedSession.objects.filter(
+            user=self.user,
+            date__gte=timezone.localdate(),
+            status='planned',
+            origin='system',
+        ).delete()
+
         for session_data in sessions:
             PlannedSession.objects.create(
                 user=self.user,
@@ -101,7 +111,7 @@ class PlanningService:
         if contests.exists():
             exam_date = contests.first().exam_date
             if exam_date:
-                days_until = (exam_date - timezone.now().date()).days
+                days_until = (exam_date - timezone.localdate()).days
                 if days_until <= 30:
                     strategy['allocation']['questions'] = 50
                     strategy['allocation']['simulated'] = 15
@@ -112,7 +122,7 @@ class PlanningService:
 
     def _generate_sessions(self, strategy, contests):
         sessions = []
-        today = timezone.now().date()
+        today = timezone.localdate()
         weeks = 4
         days_to_plan = weeks * 7
 
@@ -213,7 +223,7 @@ class PlanningService:
     def recalculate_plan(self):
         future_sessions = PlannedSession.objects.filter(
             user=self.user,
-            date__gte=timezone.now().date(),
+            date__gte=timezone.localdate(),
             status__in=['planned', 'in_progress']
         ).order_by('date', 'start_time')
 
@@ -233,7 +243,7 @@ class PlanningService:
 
         created_count = 0
         if next_activity:
-            today = timezone.now().date()
+            today = timezone.localdate()
             existing = PlannedSession.objects.filter(
                 user=self.user,
                 date=today,
