@@ -10,6 +10,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Dias da semana em inglês fixo — evita dependência de locale do SO.
+# Casa com o que o frontend envia (value="mon", "tue", ...)
+WEEKDAY_ABBR = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
 class PlanningService:
     """
     Serviço de planejamento adaptativo.
@@ -118,7 +122,7 @@ class PlanningService:
 
         for day_offset in range(days_to_plan):
             current_date = today + timedelta(days=day_offset)
-            day_name = current_date.strftime('%a').lower()
+            day_name = WEEKDAY_ABBR[current_date.weekday()]
             day_blocks = self._get_blocks_for_day(availability, day_name)
             if not day_blocks:
                 continue
@@ -166,11 +170,15 @@ class PlanningService:
         availability = []
         for day in self.config.available_days:
             start_hour = 19
-            end_hour = 22
             hours = float(self.config.hours_per_day or 3.0)
+            start_dt = datetime(2000, 1, 1, start_hour, 0)
+            end_dt = start_dt + timedelta(hours=hours)
             availability.append({
                 'day': day,
-                'periods': [{'start': f"{start_hour:02d}:00", 'end': f"{start_hour + int(hours):02d}:00"}]
+                'periods': [{
+                    'start': start_dt.strftime('%H:%M'),
+                    'end': end_dt.strftime('%H:%M'),
+                }]
             })
         return availability
 
@@ -220,6 +228,7 @@ class PlanningService:
                     session.reason = "Manutenção"
                 session.save()
 
+        created_count = 0
         if next_activity:
             today = timezone.now().date()
             existing = PlannedSession.objects.filter(
@@ -230,7 +239,7 @@ class PlanningService:
             ).exists()
             if not existing:
                 availability = self.config.availability or self._legacy_availability()
-                today_name = today.strftime('%a').lower()
+                today_name = WEEKDAY_ABBR[today.weekday()]
                 blocks = self._get_blocks_for_day(availability, today_name)
                 if blocks:
                     block = blocks[0]
@@ -251,5 +260,6 @@ class PlanningService:
                         origin='learning_engine',
                         status='planned'
                     )
+                    created_count = 1
 
-        return {"updated": future_sessions.count(), "created": 1 if next_activity else 0}
+        return {"updated": future_sessions.count(), "created": created_count}
