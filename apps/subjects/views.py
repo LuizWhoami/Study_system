@@ -8,6 +8,8 @@ from django.utils import timezone
 from .models import Subject, Topic
 from .forms import SubjectForm, TopicForm
 from apps.contests.models import Contest
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 # ============================
 # VIEWS PARA MATÉRIAS (SUBJECT)
@@ -222,6 +224,8 @@ class TopicDeleteView(LoginRequiredMixin, DeleteView):
 # AÇÕES DE ALTERAÇÃO DE STATUS
 # ============================
 
+@login_required
+@require_POST
 def alterar_status_materia(request, pk):
     subject = get_object_or_404(Subject, pk=pk, contest__user=request.user)
     novo_status = request.POST.get('status')
@@ -240,6 +244,8 @@ def alterar_status_materia(request, pk):
     messages.success(request, f'Matéria "{subject.name}" alterada para {subject.get_status_display()}.')
     return redirect('subjects:by_contest', estudo_id=subject.contest.id)
 
+@login_required
+@require_POST
 def alterar_status_topico(request, pk):
     topic = get_object_or_404(Topic, pk=pk, subject__contest__user=request.user)
     novo_status = request.POST.get('status')

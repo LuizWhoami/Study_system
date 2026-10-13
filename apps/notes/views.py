@@ -7,7 +7,6 @@ from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.views.decorators.csrf import csrf_exempt
 from .models import Note, Tag
 from .forms import NoteForm
 from apps.subjects.models import Topic
@@ -88,7 +87,6 @@ def gerar_flashcards_nota(request, note_id):
     return JsonResponse({'flashcards': flashcards, 'note_id': note.id})
 
 @login_required
-@csrf_exempt
 def salvar_flashcards_nota(request, note_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -152,7 +150,6 @@ def gerar_questoes_nota(request, note_id):
     return JsonResponse({'questoes': questoes, 'note_id': note.id})
 
 @login_required
-@csrf_exempt
 def salvar_questoes_nota(request, note_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
