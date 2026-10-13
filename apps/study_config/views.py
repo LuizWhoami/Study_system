@@ -18,20 +18,30 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def config_view(request):
-    """Página principal de configuração (wizard evoluído)."""
-    config, created = StudyConfig.objects.get_or_create(user=request.user)
+    """
+    Página principal de configuração (wizard evoluído).
+
+    IMPORTANTE: não faz get_or_create aqui. O plano só é persistido quando
+    o usuário clica em Salvar. Sem isso, o plano "voltava" após ser excluído
+    (get_or_create recriava um vazio a cada visita a /config/).
+    """
+    config = StudyConfig.objects.filter(user=request.user).first()
+    is_new = config is None
+    if is_new:
+        config = StudyConfig(user=request.user)  # em memória, não salvo
+
     contests = Contest.objects.filter(user=request.user)
-    selected_ids = config.selected_contests.values_list('id', flat=True)
-    
-    # Se o usuário já tem histórico, pré-preencher
+    selected_ids = list(config.selected_contests.values_list('id', flat=True)) if config.pk else []
+
     has_history = LearningEngine(request.user).get_today_plan() is not None
-    
+
     context = {
         'config': config,
         'contests': contests,
-        'selected_ids': list(selected_ids),
+        'selected_ids': selected_ids,
         'step': int(request.GET.get('step', 1)),
         'has_history': has_history,
+        'is_new': is_new,
     }
     return render(request, 'study_config/config.html', context)
 
@@ -301,22 +311,29 @@ def planos_list(request):
     return render(request, 'study_config/planos_list.html', {'planos': planos})
 
 @login_required
+@require_POST
 def plano_delete(request, pk):
-    """Exclui um plano de estudos."""
+    """
+    Exclui um plano de estudos.
+    Protegido por @login_required + @require_POST (antes aceitava GET
+    e era possível apagar via <img src="...">).
+    """
     plano = get_object_or_404(StudyConfig, pk=pk, user=request.user)
-    
-    # Se for o plano ativo, pede confirmação extra (já feita no frontend)
-    if plano.is_active:
-        # Desativa o plano antes de excluir (opcional, mas recomendado)
-        plano.is_active = False
-        plano.save()
-        messages.warning(request, f'O plano "{plano}" estava ativo e foi desativado antes da exclusão.')
-    
+
+    nome = str(plano)
+    era_ativo = plano.is_active
+
     plano.delete()
-    messages.success(request, f'Plano "{plano}" excluído com sucesso.')
+
+    if era_ativo:
+        messages.success(request, f'Plano "{nome}" (que estava ativo) foi excluído.')
+    else:
+        messages.success(request, f'Plano "{nome}" excluído com sucesso.')
+
     return redirect('study_config:planos_list')
 
 @login_required
+@require_POST
 def plano_activate(request, pk):
     """Ativa um plano (desativa os outros)."""
     plano = get_object_or_404(StudyConfig, pk=pk, user=request.user)
