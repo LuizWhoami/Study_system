@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta, date
@@ -325,3 +326,105 @@ def plano_activate(request, pk):
     plano.save()
     messages.success(request, f'Plano "{plano}" ativado com sucesso.')
     return redirect('study_config:planos_list')
+
+# ============================================================
+# AÇÕES EM SESSÕES PLANEJADAS (Fase 2)
+# ============================================================
+
+
+@login_required
+@require_POST
+def session_complete(request, pk):
+    """Marca uma sessão planejada como concluída."""
+    sessao = get_object_or_404(PlannedSession, pk=pk, user=request.user)
+    if sessao.status == 'skipped':
+        messages.error(request, 'Uma sessão pulada não pode ser concluída.')
+        return redirect('dashboard:index')
+
+    sessao.status = 'completed'
+    sessao.is_completed = True
+    sessao.save(update_fields=['status', 'is_completed', 'updated_at'])
+    messages.success(
+        request,
+        f'Sessão de {sessao.topic.name if sessao.topic else sessao.contest.name} concluída.'
+    )
+    return redirect('dashboard:index')
+
+
+@login_required
+@require_POST
+def session_skip(request, pk):
+    """Marca uma sessão planejada como pulada."""
+    sessao = get_object_or_404(PlannedSession, pk=pk, user=request.user)
+    if sessao.status == 'completed':
+        messages.error(request, 'Uma sessão concluída não pode ser pulada.')
+        return redirect('dashboard:index')
+
+    sessao.status = 'skipped'
+    sessao.save(update_fields=['status', 'updated_at'])
+    messages.warning(
+        request,
+        f'Sessão de {sessao.topic.name if sessao.topic else sessao.contest.name} pulada.'
+    )
+    return redirect('dashboard:index')
+
+
+@login_required
+@require_POST
+def session_reschedule(request, pk):
+    """
+    Reagenda uma sessão: marca a original como `rescheduled` e cria uma nova
+    com a data/hora escolhidas. Preserva histórico.
+    """
+    sessao_original = get_object_or_404(PlannedSession, pk=pk, user=request.user)
+
+    nova_data_str = request.POST.get('date')
+    novo_inicio_str = request.POST.get('start_time')
+    novo_fim_str = request.POST.get('end_time')
+
+    if not nova_data_str:
+        messages.error(request, 'Informe a nova data.')
+        return redirect('dashboard:index')
+
+    try:
+        nova_data = datetime.strptime(nova_data_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, 'Data inválida.')
+        return redirect('dashboard:index')
+
+    # Horários: se não vierem, mantém os originais
+    try:
+        novo_inicio = (
+            datetime.strptime(novo_inicio_str, '%H:%M').time()
+            if novo_inicio_str else sessao_original.start_time
+        )
+        novo_fim = (
+            datetime.strptime(novo_fim_str, '%H:%M').time()
+            if novo_fim_str else sessao_original.end_time
+        )
+    except ValueError:
+        messages.error(request, 'Horário inválido.')
+        return redirect('dashboard:index')
+
+    # 1. Preserva a original marcando como reagendada
+    sessao_original.status = 'rescheduled'
+    sessao_original.save(update_fields=['status', 'updated_at'])
+
+    # 2. Cria a nova
+    PlannedSession.objects.create(
+        user=request.user,
+        contest=sessao_original.contest,
+        topic=sessao_original.topic,
+        date=nova_data,
+        start_time=novo_inicio,
+        end_time=novo_fim,
+        duration_minutes=sessao_original.duration_minutes,
+        session_type=sessao_original.session_type,
+        priority=sessao_original.priority,
+        reason=f'Reagendada de {sessao_original.date.strftime("%d/%m/%Y")}. {sessao_original.reason}'.strip(),
+        origin='rescheduled',
+        status='planned',
+    )
+
+    messages.success(request, f'Sessão reagendada para {nova_data.strftime("%d/%m/%Y")}.')
+    return redirect('dashboard:index')

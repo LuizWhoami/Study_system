@@ -3,115 +3,223 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- ===== HOJE (SEÇÃO PRINCIPAL) ===== -->
-<div class="hero-section">
+<!-- ===== HERO ===== -->
+<div class="hero-section mb-4">
   <h1>Bom dia, {{ user.username }} 👋</h1>
   <p>Vamos continuar seus estudos?</p>
 </div>
 
+<!-- ===== TAREFA DO DIA (PlannedSession) ===== -->
 <div class="row g-4 mb-4">
-  <!-- Meta e progresso do dia -->
-  <div class="col-md-6">
+  <div class="col-md-7">
     <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-header bg-dark border-secondary d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Tarefas de hoje</h5>
+        <a href="{% url 'study_config:meu_plano' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-calendar-week"></i> Plano completo
+        </a>
+      </div>
       <div class="card-body">
-        <h5 class="card-title text-light">📊 Hoje</h5>
-        <div class="d-flex justify-content-between align-items-center">
-          <span>Meta: {{ today_plan.daily_goal_hours }}h</span>
-          <span>{{ today_plan.hours_done|floatformat:1 }}h / {{ today_plan.daily_goal_hours }}h</span>
-        </div>
-        <div class="progress mb-2" style="height: 10px;">
-          <div class="progress-bar" role="progressbar" style="width: {{ today_plan.progress_percent }}%;" aria-valuenow="{{ today_plan.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-        <div class="d-flex justify-content-between text-secondary small">
-          <span>🔥 Sequência: {{ streak }} dias</span>
-          <span>⏳ Revisões pendentes: {{ today_plan.pending_question_reviews }}</span>
-        </div>
+        {% if today_sessions %}
+          <ul class="list-group list-group-flush">
+            {% for s in today_sessions %}
+              <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <span class="badge bg-{% if s.session_type == 'study' %}primary{% elif s.session_type == 'review' %}warning text-dark{% elif s.session_type == 'questions' %}info text-dark{% elif s.session_type == 'flashcards' %}secondary{% else %}secondary{% endif %} me-2">
+                    {{ s.get_session_type_display }}
+                  </span>
+                  <strong>{{ s.topic.name|default:s.contest.name }}</strong>
+                  <br>
+                  <small class="text-muted">
+                    {{ s.start_time|time:"H:i" }} – {{ s.end_time|time:"H:i" }} · {{ s.duration_minutes }} min
+                  </small>
+                  {% if s.status == 'completed' %}
+                    <span class="badge bg-success ms-2"><i class="bi bi-check-lg"></i> Concluída</span>
+                  {% elif s.status == 'in_progress' %}
+                    <span class="badge bg-warning text-dark ms-2"><i class="bi bi-play-fill"></i> Em andamento</span>
+                  {% elif s.status == 'skipped' %}
+                    <span class="badge bg-secondary ms-2">Pulada</span>
+                  {% endif %}
+                </div>
+                {% if s.status == 'planned' or s.status == 'in_progress' %}
+                  <div class="d-flex gap-1">
+                    <a href="{% url 'study:study' %}?topic={{ s.topic.id }}" class="btn btn-sm btn-success" title="Iniciar">
+                      <i class="bi bi-play-fill"></i>
+                    </a>
+                    <form method="post" action="{% url 'study_config:session_complete' s.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como concluída">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'study_config:session_skip' s.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Pular">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-center py-4">
+            <i class="bi bi-calendar-check fs-1 text-secondary"></i>
+            <p class="text-secondary mb-2 mt-2">Nenhuma tarefa planejada para hoje.</p>
+            <a href="{% url 'study_config:meu_plano' %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-plus-circle me-1"></i> Ver plano da semana
+            </a>
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Próxima atividade -->
-  <div class="col-md-6">
+  <!-- ===== PRÓXIMA ATIVIDADE (LearningEngine) ===== -->
+  <div class="col-md-5">
     <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Sugestão do sistema</h5>
+      </div>
       <div class="card-body">
-        <h5 class="card-title text-light">🎯 Próxima atividade</h5>
         {% if today_plan.next_activity %}
           <div class="p-3 bg-dark bg-opacity-25 rounded border border-secondary">
-            <h6 class="text-primary">{{ today_plan.next_activity.topic.subject.name }}</h6>
+            <h6 class="text-primary mb-1">{{ today_plan.next_activity.topic.subject.name }}</h6>
             <p class="mb-1"><strong>{{ today_plan.next_activity.topic.name }}</strong></p>
-            <p class="text-secondary small">{{ today_plan.next_activity.reason }}</p>
-            <div class="d-flex justify-content-between align-items-center">
+            <p class="text-secondary small mb-2">{{ today_plan.next_activity.reason }}</p>
+            <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="badge bg-primary">{{ today_plan.next_activity.estimated_time }} min</span>
               <span class="badge bg-secondary">{{ today_plan.next_activity.questions_count }} questões</span>
             </div>
-            <a href="{% url 'study:study' %}?topic={{ today_plan.next_activity.topic.id }}" class="btn btn-primary btn-sm mt-2">
+            <a href="{% url 'study:study' %}?topic={{ today_plan.next_activity.topic.id }}" class="btn btn-primary btn-sm w-100">
               <i class="bi bi-play-fill"></i> Começar agora
             </a>
           </div>
         {% else %}
-          <p class="text-secondary">Nenhuma atividade recomendada. Que tal criar uma questão ou estudar um tópico?</p>
+          <p class="text-secondary mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Nenhuma sugestão no momento. Continue estudando para gerar recomendações.
+          </p>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===== CARDS DE RESUMO (existentes) ===== -->
-<div class="row g-4">
+<!-- ===== CARDS DE RESUMO ===== -->
+<div class="row g-4 mb-4">
   <div class="col-md-3 col-sm-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title">Hoje</h6>
+          <h6 class="card-title text-secondary mb-0">Hoje</h6>
           <i class="bi bi-clock-history fs-3 text-primary"></i>
         </div>
-        <p class="display-6">{{ hours_today }}h</p>
+        <p class="display-6 mb-0">{{ hours_today }}h</p>
         <small class="text-muted">Meta: {{ daily_goal_hours }}h</small>
       </div>
     </div>
   </div>
   <div class="col-md-3 col-sm-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title">Semana</h6>
+          <h6 class="card-title text-secondary mb-0">Semana</h6>
           <i class="bi bi-calendar-week fs-3 text-success"></i>
         </div>
-        <p class="display-6">{{ hours_week }}h</p>
+        <p class="display-6 mb-0">{{ hours_week }}h</p>
         <small class="text-muted">Últimos 7 dias</small>
       </div>
     </div>
   </div>
   <div class="col-md-3 col-sm-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title">Mês</h6>
+          <h6 class="card-title text-secondary mb-0">Mês</h6>
           <i class="bi bi-calendar-month fs-3 text-warning"></i>
         </div>
-        <p class="display-6">{{ hours_month }}h</p>
+        <p class="display-6 mb-0">{{ hours_month }}h</p>
         <small class="text-muted">Últimos 30 dias</small>
       </div>
     </div>
   </div>
   <div class="col-md-3 col-sm-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title">Questões</h6>
+          <h6 class="card-title text-secondary mb-0">Questões</h6>
           <i class="bi bi-check2-circle fs-3 text-info"></i>
         </div>
-        <p class="display-6">{{ questions_today }}</p>
+        <p class="display-6 mb-0">{{ questions_today }}</p>
         <small class="text-muted">Acertos: {{ accuracy }}%</small>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===== PROGRESSO E SESSÕES (existentes) ===== -->
-<div class="row g-4 mt-2">
+<!-- ===== AGENDA DA SEMANA (PlannedSession) ===== -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Agenda da semana</h5>
+        <div>
+          <span class="badge bg-secondary me-1">{{ weekly_stats.planned_count }} planejadas</span>
+          <span class="badge bg-success me-1">{{ weekly_stats.completed_count }} concluídas</span>
+          <span class="badge bg-primary">{{ weekly_stats.percent }}%</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          {% for dia in week_by_day %}
+            <div class="col-md-6 col-lg-3 col-xl">
+              <div class="p-2 bg-dark bg-opacity-25 rounded border {% if dia.is_today %}border-primary{% else %}border-secondary{% endif %} h-100">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <strong class="text-light">{{ dia.day_name }}</strong>
+                  <small class="text-muted">{{ dia.date|date:"d/m" }}</small>
+                </div>
+                {% if dia.is_today %}
+                  <span class="badge bg-primary mb-1">Hoje</span>
+                {% endif %}
+                {% if dia.sessions %}
+                  <ul class="list-unstyled mb-0">
+                    {% for s in dia.sessions %}
+                      <li class="small py-1 border-bottom border-secondary">
+                        <span class="badge bg-{% if s.session_type == 'study' %}primary{% elif s.session_type == 'review' %}warning text-dark{% elif s.session_type == 'questions' %}info text-dark{% elif s.session_type == 'flashcards' %}secondary{% else %}secondary{% endif %} me-1" style="font-size: 0.65rem;">
+                          {{ s.start_time|time:"H:i" }}
+                        </span>
+                        <span class="text-secondary">{{ s.topic.name|default:s.contest.name|truncatechars:18 }}</span>
+                        {% if s.status == 'completed' %}
+                          <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                        {% elif s.status == 'in_progress' %}
+                          <i class="bi bi-play-circle-fill text-warning ms-1"></i>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-muted small mb-0">— Sem sessões</p>
+                {% endif %}
+                {% if dia.planned_minutes > 0 %}
+                  <small class="text-muted d-block mt-1">
+                    {{ dia.completed_minutes }}/{{ dia.planned_minutes }} min
+                  </small>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROGRESSO E ÚLTIMAS SESSÕES ===== -->
+<div class="row g-4 mb-4">
   <div class="col-md-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>Progresso Geral</h5>
         <div class="progress mb-3">
@@ -125,17 +233,17 @@
     </div>
   </div>
   <div class="col-md-6">
-    <div class="card h-100">
+    <div class="card bg-dark text-light border-secondary h-100">
       <div class="card-body">
         <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Últimas Sessões</h5>
         <ul class="list-group list-group-flush">
           {% for session in last_sessions %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
               <span><i class="bi bi-file-text me-2"></i>{{ session.topic.name|default:"Sem tópico" }}</span>
               <span class="badge bg-primary rounded-pill">{{ session.duration_minutes }} min</span>
             </li>
           {% empty %}
-            <li class="list-group-item text-muted">Nenhuma sessão registrada.</li>
+            <li class="list-group-item bg-dark text-light border-secondary text-muted">Nenhuma sessão registrada.</li>
           {% endfor %}
         </ul>
       </div>
@@ -144,11 +252,11 @@
 </div>
 
 <!-- ===== PONTOS FRACOS ===== -->
-<div class="row mt-4">
+<div class="row mb-4">
   <div class="col-12">
     <div class="card bg-dark text-light border-secondary">
       <div class="card-header bg-dark border-secondary">
-        <h5 class="mb-0 text-light"><i class="bi bi-exclamation-triangle me-2"></i>Seus pontos fracos</h5>
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Seus pontos fracos</h5>
       </div>
       <div class="card-body">
         {% if today_plan.weak_topics %}
@@ -168,18 +276,18 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-secondary">🎉 Nenhum ponto fraco identificado. Continue assim!</p>
+          <p class="text-secondary mb-0">🎉 Nenhum ponto fraco identificado. Continue assim!</p>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===== REVISÕES PENDENTES (flashcards e questões) ===== -->
-<div class="row mt-4">
+<!-- ===== REVISÕES PENDENTES ===== -->
+<div class="row">
   <div class="col-12">
-    <div class="card">
-      <div class="card-header">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary">
         <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes</h5>
       </div>
       <div class="card-body" id="pending-reviews-list">
@@ -191,8 +299,8 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Carregar revisões pendentes (flashcards + questões)
     const container = document.getElementById('pending-reviews-list');
+    if (!container) return;
     fetch('/estudo/pending-reviews/')
       .then(r => r.json())
       .then(data => {
@@ -207,7 +315,7 @@
           if (days <= 0) badgeClass = 'bg-danger';
           else if (days === 1) badgeClass = 'bg-warning text-dark';
           html += `
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
               <div>
                 <strong>${item.topic}</strong>
                 <span class="text-muted ms-2">(${item.subject})</span>
