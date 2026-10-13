@@ -236,6 +236,81 @@ FORMATO DE SAÍDA — APENAS JSON puro, sem markdown:
 ]"""
 
     # ==========================================================
+    # ==========================================================
+    # RECUPERAÇÃO DE JSON TRUNCADO
+    # ==========================================================
+    def _recover_truncated_json(self, json_str):
+        """
+        Tenta recuperar um array JSON truncado (geralmente por max_tokens).
+
+        Estratégia em 2 tentativas:
+        1. Fechamento ingênuo (fecha string, chaves e colchetes pendentes).
+        2. Corte no último objeto de primeiro nível completo e fechamento
+           do array — rastreando profundidade e estado de string.
+
+        Retorna lista de dicts ou None.
+        """
+        if not json_str or not json_str.strip():
+            return None
+
+        json_str = json_str.strip()
+
+        # Tentativa 1 — fechamento ingênuo
+        tentativa = json_str
+        if tentativa.count('"') % 2 == 1:
+            tentativa += '"'
+        abertos_chaves = tentativa.count('{') - tentativa.count('}')
+        abertos_colchetes = tentativa.count('[') - tentativa.count(']')
+        tentativa += '}' * max(0, abertos_chaves)
+        tentativa += ']' * max(0, abertos_colchetes)
+
+        try:
+            data = json.loads(tentativa)
+            if isinstance(data, list):
+                logger.info("JSON truncado recuperado (fechamento simples).")
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        # Tentativa 2 — cortar no último objeto completo de primeiro nível
+        profundidade = 0
+        em_string = False
+        escape = False
+        ultimo_fim_valido = -1
+
+        for i, ch in enumerate(json_str):
+            if escape:
+                escape = False
+                continue
+            if ch == '\\' and em_string:
+                escape = True
+                continue
+            if ch == '"':
+                em_string = not em_string
+                continue
+            if em_string:
+                continue
+            if ch == '{':
+                profundidade += 1
+            elif ch == '}':
+                profundidade -= 1
+                if profundidade == 1:
+                    ultimo_fim_valido = i
+
+        if ultimo_fim_valido == -1:
+            return None
+
+        recorte = json_str[:ultimo_fim_valido + 1] + ']'
+        try:
+            data = json.loads(recorte)
+            if isinstance(data, list):
+                logger.info("JSON truncado recuperado (corte no último objeto).")
+                return data
+        except json.JSONDecodeError as e:
+            logger.warning("Falha na recuperação por corte: %s", e)
+
+        return None
+
     # NORMALIZAÇÃO / EMBARALHAMENTO
     # ==========================================================
     def _normalizar_questao(self, q):

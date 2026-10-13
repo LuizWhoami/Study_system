@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block title %}Estatísticas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="text-light"><i class="bi bi-bar-chart-line me-2"></i>Estatísticas</h2>
+  <a href="{% url 'study_config:config' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Voltar para configuração
+  </a>
+</div>
+
+<!-- ===== CARDS DE RESUMO ===== -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title text-secondary mb-0">Total estudado</h6>
+          <i class="bi bi-clock-history fs-3 text-primary"></i>
+        </div>
+        <p class="display-6 mb-0">{{ total_hours }}h</p>
+        <small class="text-muted">Desde o início</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title text-secondary mb-0">Esta semana</h6>
+          <i class="bi bi-calendar-week fs-3 text-success"></i>
+        </div>
+        <p class="display-6 mb-0">{{ hours_week }}h</p>
+        <small class="text-muted">Últimos 7 dias</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title text-secondary mb-0">Questões</h6>
+          <i class="bi bi-check2-circle fs-3 text-info"></i>
+        </div>
+        <p class="display-6 mb-0">{{ questions_total }}</p>
+        <small class="text-muted">Cadastradas</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title text-secondary mb-0">Flashcards</h6>
+          <i class="bi bi-card-checklist fs-3 text-warning"></i>
+        </div>
+        <p class="display-6 mb-0">{{ flashcards_total }}</p>
+        <small class="text-muted">{{ flashcards_pending }} pendente(s)</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== META SEMANAL ===== -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="card-title mb-0"><i class="bi bi-target me-2"></i>Meta semanal</h5>
+          <span class="text-secondary">{{ hours_week }}h / {{ target_hours }}h</span>
+        </div>
+        {% if config_active %}
+          <div class="progress" style="height: 14px;">
+            <div class="progress-bar {% if hours_progress >= 100 %}bg-success{% elif hours_progress >= 60 %}bg-primary{% else %}bg-warning{% endif %}"
+                 role="progressbar"
+                 style="width: {{ hours_progress }}%;"
+                 aria-valuenow="{{ hours_progress }}"
+                 aria-valuemin="0"
+                 aria-valuemax="100">{{ hours_progress }}%</div>
+          </div>
+          <small class="text-muted d-block mt-2">
+            {% if hours_progress >= 100 %}
+              🎉 Meta atingida! Continue assim.
+            {% elif hours_progress >= 60 %}
+              💪 Bom ritmo. Falta pouco para bater a meta.
+            {% else %}
+              ⚡ Foco! Você consegue.
+            {% endif %}
+          </small>
+        {% else %}
+          <div class="alert alert-warning mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Nenhuma configuração ativa.
+            <a href="{% url 'study_config:config' %}" class="alert-link">Configurar plano</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROGRESSO POR MATÉRIA + REVISÕES ===== -->
+<div class="row g-4 mb-4">
+  <div class="col-md-7">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0"><i class="bi bi-book me-2"></i>Progresso por matéria</h5>
+      </div>
+      <div class="card-body">
+        {% if subjects_progress %}
+          {% for materia, dados in subjects_progress.items %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-light">{{ materia }}</span>
+                <span class="text-secondary small">{{ dados.reviewed }}/{{ dados.total }} revisados</span>
+              </div>
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-info" role="progressbar"
+                     style="width: {% widthratio dados.reviewed dados.total 100 %}%;"
+                     aria-valuenow="{% widthratio dados.reviewed dados.total 100 %}"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-secondary mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Ainda não há conteúdo estudado. Comece uma sessão para ver o progresso.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="card bg-dark text-light border-secondary h-100">
+      <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões pendentes</h5>
+      </div>
+      <div class="card-body">
+        <p class="display-4 text-center mb-0">{{ pending_reviews_count }}</p>
+        <p class="text-center text-secondary mb-3">nos próximos 3 dias</p>
+        {% if pending_reviews_count > 0 %}
+          <a href="{% url 'study:study' %}" class="btn btn-primary w-100">
+            <i class="bi bi-play-fill me-1"></i> Revisar agora
+          </a>
+        {% else %}
+          <div class="alert alert-success mb-0 text-center">
+            🎉 Tudo em dia!
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ÚLTIMAS SESSÕES ===== -->
+<div class="row">
+  <div class="col-12">
+    <div class="card bg-dark text-light border-secondary">
+      <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Últimas sessões</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if last_sessions %}
+          <ul class="list-group list-group-flush">
+            {% for session in last_sessions %}
+              <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
+                <span>
+                  <i class="bi bi-file-text me-2 text-primary"></i>
+                  {{ session.topic.name|default:"Sem tópico" }}
+                  {% if session.topic %}
+                    <span class="text-secondary small ms-2">
+                      ({{ session.topic.subject.name }})
+                    </span>
+                  {% endif %}
+                </span>
+                <div>
+                  <span class="badge bg-primary me-2">{{ session.duration_minutes }} min</span>
+                  <small class="text-muted">{{ session.start_time|date:"d/m H:i" }}</small>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-secondary m-3 mb-0">
+            Nenhuma sessão registrada ainda. Use o cronômetro no topo para começar.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
