@@ -93,12 +93,17 @@ def preview_config(request):
             for wt in weak_topics
         ]
 
+        # Média de horas por matéria (usada no card "Horas/matéria" do frontend)
+        n_selected = len(selected_ids)
+        hours_per_subject = round(target_hours / n_selected, 1) if n_selected > 0 else 0
+
         response = {
             'total_hours': target_hours,
-            'selected_count': len(selected_ids),
+            'selected_count': n_selected,
+            'hours_per_subject': hours_per_subject,
             'conflicts': conflicts,
             'has_conflicts': len(conflicts) > 0,
-            'is_valid': len(conflicts) == 0 and len(selected_ids) > 0,
+            'is_valid': len(conflicts) == 0 and n_selected > 0,
             'weak_topics': weak_topics_serializados,
             'strategy': strategy,
         }
