@@ -174,15 +174,33 @@ def save_config(request):
         
         config.is_active = True
         config.save()
-        
         # Gerar plano inicial usando PlanningService
         service = PlanningService(user)
-        sessions = service.generate_initial_plan()
-        
+        sessions = service.generate_initial_plan() or []
+
+        if not sessions:
+            logger.warning(
+                "Plano salvo mas nenhuma sessão gerada. user=%s, "
+                "available_days=%s, contests=%s",
+                user.username, config.available_days,
+                list(config.selected_contests.values_list('name', flat=True)),
+            )
+            return JsonResponse({
+                'success': False,
+                'message': (
+                    'Configuração salva, mas nenhuma sessão foi gerada. '
+                    'Verifique se (1) você selecionou ao menos uma matéria, '
+                    '(2) ao menos um dia da semana está marcado, e '
+                    '(3) as matérias selecionadas têm tópicos cadastrados.'
+                ),
+                'sessions_count': 0,
+                'reason': 'sem_sessoes_geradas',
+            })
+
         return JsonResponse({
             'success': True,
-            'message': 'Configuração salva e plano gerado com sucesso!',
-            'sessions_count': len(sessions) if sessions else 0
+            'message': f'Configuração salva e {len(sessions)} sessões planejadas!',
+            'sessions_count': len(sessions),
         })
         
     except Exception as e:

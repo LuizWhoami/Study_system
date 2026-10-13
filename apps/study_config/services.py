@@ -79,7 +79,8 @@ class PlanningService:
 
         for wt in weak_topics[:3]:
             strategy['focus'].append({
-                'topic': wt['topic'].name,
+                'topic_id': wt['topic'].id,      # ID serializável (usado por _select_topic_for_day)
+                'topic_name': wt['topic'].name,  # string para exibição
                 'subject': wt['topic'].subject.name,
                 'mastery': wt['mastery'],
                 'priority': wt['priority'],
@@ -189,14 +190,16 @@ class PlanningService:
         return []
 
     def _select_topic_for_day(self, contests, strategy, day_offset):
-        weak_topics = [item['topic'] for item in strategy['focus'] if item.get('topic')]
-        if weak_topics:
-            topic = random.choice(weak_topics)
-            return topic
+        # Pega os IDs dos tópicos fracos (serializáveis) e busca os objetos
+        weak_ids = [item['topic_id'] for item in strategy.get('focus', []) if item.get('topic_id')]
+        if weak_ids:
+            topics_qs = Topic.objects.filter(id__in=weak_ids, subject__contest__in=contests)
+            if topics_qs.exists():
+                return random.choice(list(topics_qs))
 
         topics = Topic.objects.filter(subject__contest__in=contests)
         if topics.exists():
-            return random.choice(topics)
+            return random.choice(list(topics))
         return None
 
     def _select_session_type(self, allocation):
