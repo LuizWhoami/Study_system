@@ -129,6 +129,14 @@ class QuestionReview(models.Model):
 
 
 class ErrorLog(models.Model):
+    """
+    Caderno de revisão: registra TODA tentativa do usuário (acerto ou erro).
+
+    - `acertou=True` → pergunta para revisar (usuário pode excluir).
+    - `acertou=False` → erro com motivo + contador consecutivo.
+
+    O usuário pode remover qualquer entrada manualmente.
+    """
     REASON_CHOICES = [
         ('desconhecido', 'Não conhecia o conteúdo'),
         ('esqueci', 'Esqueci'),
@@ -141,16 +149,30 @@ class ErrorLog(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name='errors')
-    motivo = models.CharField(max_length=20, choices=REASON_CHOICES, default='desconhecido')
+    acertou = models.BooleanField(default=False, verbose_name="Acertou?")
+    motivo = models.CharField(
+        max_length=20,
+        choices=REASON_CHOICES,
+        blank=True,
+        default='',
+        verbose_name="Motivo do erro",
+    )
     data = models.DateTimeField(auto_now_add=True)
-    erro_consecutivo = models.PositiveSmallIntegerField(default=1)
+    erro_consecutivo = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name="Erros consecutivos",
+    )
 
     class Meta:
         ordering = ['-data']
         indexes = [
             models.Index(fields=['user', 'question']),
+            models.Index(fields=['user', 'acertou']),
         ]
 
+    def __str__(self):
+        status = 'acertou' if self.acertou else 'errou'
+        return f'{self.user} {status} questão #{self.question_id}'
 
 class Simulated(models.Model):
     STATUS_CHOICES = [

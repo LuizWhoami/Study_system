@@ -22,6 +22,7 @@ urlpatterns = [
     # Caderno de erros
     path('erros/', views.error_log_list, name='error_log'),
     path('erros/<int:pk>/', views.error_log_detail, name='error_log_detail'),
+    path('erros/<int:pk>/excluir/', views.error_log_delete, name='error_log_delete'),
 
     # Performance e import
     path('performance/', views.performance, name='performance'),

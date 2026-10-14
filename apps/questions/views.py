@@ -167,6 +167,48 @@ class QuestionDeleteView(LoginRequiredMixin, DeleteView):
 # RESOLUÇÃO DE QUESTÃO (avulsa, fora do treino)
 # ============================================================
 
+def _registrar_no_caderno(user, question, acertou, motivo=''):
+    """
+    Registra uma tentativa no caderno (acerto OU erro).
+
+    - Atualiza `erro_consecutivo` (incrementa se erro, zera se acerto).
+    - Sempre agenda/cria `QuestionReview`.
+    """
+    last = ErrorLog.objects.filter(user=user, question=question).order_by('-data').first()
+
+    if acertou:
+        erro_consecutivo = 0
+        motivo_final = ''
+    else:
+        erro_consecutivo = (last.erro_consecutivo + 1) if last else 1
+        motivo_final = motivo or 'desconhecido'
+
+    ErrorLog.objects.create(
+        user=user,
+        question=question,
+        acertou=acertou,
+        motivo=motivo_final,
+        erro_consecutivo=erro_consecutivo,
+    )
+
+    review, created = QuestionReview.objects.get_or_create(
+        user=user,
+        question=question,
+        defaults={
+            'proxima_revisao': timezone.localdate() + timedelta(days=1),
+            'intervalo': 1,
+        },
+    )
+    if not created:
+        if acertou:
+            review.intervalo = min(review.intervalo * 2, 30)
+        else:
+            review.intervalo = 1
+        review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
+        review.vezes_revisado += 1
+        review.save()
+
+
 @login_required
 def resolve_question(request, pk):
     """Resolve uma questão avulsa e mostra o feedback na mesma página."""
@@ -192,28 +234,13 @@ def resolve_question(request, pk):
                 topic=question.topic,
             )
 
-            if not acertou:
-                ErrorLog.objects.create(
-                    user=request.user,
-                    question=question,
-                    motivo=request.POST.get('motivo', 'desconhecido'),
-                )
-                review, created = QuestionReview.objects.get_or_create(
-                    user=request.user,
-                    question=question,
-                    defaults={
-                        'proxima_revisao': timezone.localdate() + timedelta(days=1),
-                        'intervalo': 1,
-                    },
-                )
-                if not created:
-                    review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
-                    review.intervalo = min(review.intervalo * 2, 30)
-                    review.vezes_revisado += 1
-                    review.save()
-            else:
-                ErrorLog.objects.filter(user=request.user, question=question).delete()
-                QuestionReview.objects.filter(user=request.user, question=question).delete()
+            # Caderno: SEMPRE registra (acerto OU erro)
+            _registrar_no_caderno(
+                user=request.user,
+                question=question,
+                acertou=acertou,
+                motivo=request.POST.get('motivo', ''),
+            )
 
             resultado = True
 
@@ -393,28 +420,13 @@ def treino_responder(request):
         topic=question.topic,
     )
 
-    if not acertou:
-        ErrorLog.objects.create(
-            user=request.user,
-            question=question,
-            motivo=request.POST.get('motivo', 'desconhecido'),
-        )
-        review, created = QuestionReview.objects.get_or_create(
-            user=request.user,
-            question=question,
-            defaults={
-                'proxima_revisao': timezone.localdate() + timedelta(days=1),
-                'intervalo': 1,
-            },
-        )
-        if not created:
-            review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
-            review.intervalo = min(review.intervalo * 2, 30)
-            review.vezes_revisado += 1
-            review.save()
-    else:
-        ErrorLog.objects.filter(user=request.user, question=question).delete()
-        QuestionReview.objects.filter(user=request.user, question=question).delete()
+    # Caderno: SEMPRE registra (acerto OU erro)
+    _registrar_no_caderno(
+        user=request.user,
+        question=question,
+        acertou=acertou,
+        motivo=request.POST.get('motivo', ''),
+    )
 
     # Re-renderiza a MESMA questão com o feedback
     questoes_ids = request.session.get('treino_questoes', [])
@@ -478,13 +490,47 @@ def simulado_finalizar(request, pk):
 
 @login_required
 def error_log_list(request):
-    errors = (
-        ErrorLog.objects
-        .filter(user=request.user)
-        .select_related('question', 'question__topic', 'question__topic__subject')
-    )
-    return render(request, 'questions/error_log.html', {'errors': errors})
+    """
+    Caderno de revisão. Mostra acertos E erros, com filtro.
 
+    Query string:
+      ?filtro=todos    → padrão, mostra tudo
+      ?filtro=erros    → só acertou=False
+      ?filtro=acertos  → só acertou=True
+    """
+    filtro = request.GET.get('filtro', 'todos')
+
+    base = ErrorLog.objects.filter(user=request.user).select_related(
+        'question', 'question__topic', 'question__topic__subject'
+    )
+
+    if filtro == 'erros':
+        entries = base.filter(acertou=False)
+    elif filtro == 'acertos':
+        entries = base.filter(acertou=True)
+    else:
+        entries = base
+
+    total_erros = base.filter(acertou=False).count()
+    total_acertos = base.filter(acertou=True).count()
+
+    return render(request, 'questions/error_log.html', {
+        'entries': entries,
+        'filtro': filtro,
+        'total_erros': total_erros,
+        'total_acertos': total_acertos,
+        'total_geral': total_erros + total_acertos,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def error_log_delete(request, pk):
+    """Remove uma entrada do caderno (usuário decide o que apagar)."""
+    entry = get_object_or_404(ErrorLog, pk=pk, user=request.user)
+    entry.delete()
+    messages.success(request, 'Entrada removida do caderno.')
+    return redirect('questions:error_log')
 
 @login_required
 def error_log_detail(request, pk):
