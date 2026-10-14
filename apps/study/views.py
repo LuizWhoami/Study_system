@@ -169,7 +169,7 @@ def mark_studied(request):
 @login_required
 @require_http_methods(['GET'])
 def pending_reviews(request):
-    today = timezone.now().date()
+    today = timezone.localdate()
     contents = StudyContent.objects.filter(
         user=request.user,
         next_review__lte=today + timedelta(days=3),

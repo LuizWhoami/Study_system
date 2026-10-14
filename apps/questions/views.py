@@ -202,12 +202,12 @@ def resolve_question(request, pk):
                     user=request.user,
                     question=question,
                     defaults={
-                        'proxima_revisao': timezone.now().date() + timedelta(days=1),
+                        'proxima_revisao': timezone.localdate() + timedelta(days=1),
                         'intervalo': 1,
                     },
                 )
                 if not created:
-                    review.proxima_revisao = timezone.now().date() + timedelta(days=review.intervalo)
+                    review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
                     review.intervalo = min(review.intervalo * 2, 30)
                     review.vezes_revisado += 1
                     review.save()
@@ -272,7 +272,7 @@ def treino_inteligente(request):
             qs = qs.annotate(total=Count('attempts')).filter(total=0)
 
         elif estrategia == 'atrasadas':
-            qs = qs.filter(reviews__proxima_revisao__lte=date.today())
+            qs = qs.filter(reviews__proxima_revisao__lte=timezone.localdate())
 
         elif estrategia == 'baixo_desempenho':
             qs = qs.annotate(
@@ -403,12 +403,12 @@ def treino_responder(request):
             user=request.user,
             question=question,
             defaults={
-                'proxima_revisao': timezone.now().date() + timedelta(days=1),
+                'proxima_revisao': timezone.localdate() + timedelta(days=1),
                 'intervalo': 1,
             },
         )
         if not created:
-            review.proxima_revisao = timezone.now().date() + timedelta(days=review.intervalo)
+            review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
             review.intervalo = min(review.intervalo * 2, 30)
             review.vezes_revisado += 1
             review.save()

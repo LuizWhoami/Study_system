@@ -21,7 +21,7 @@ def _build_stats_context(user):
     from apps.questions.models import Question
     from apps.study_config.models import StudyConfig
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_of_week = today - timedelta(days=today.weekday())
 
     # Sessões
@@ -76,7 +76,7 @@ def _build_stats_context(user):
 # ============================================================
 @login_required
 def calendar_view(request):
-    today = date.today()
+    today = timezone.localdate()
     base_date_str = request.GET.get('date')
     if base_date_str:
         try:

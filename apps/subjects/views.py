@@ -52,7 +52,7 @@ class SubjectByContestView(LoginRequiredMixin, ListView):
 
         exam = self.estudo.exam_date
         if exam:
-            context['days_until_exam'] = (exam - timezone.now().date()).days
+            context['days_until_exam'] = (exam - timezone.localdate()).days
 
         all_subs = list(self.object_list)
         context['stats'] = {

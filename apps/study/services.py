@@ -174,7 +174,7 @@ def finish_session(user):
 
 def _add_to_daily_progress(user, minutes):
     """Incrementa horas estudadas do dia de forma atômica."""
-    today = timezone.now().date()
+    today = timezone.localdate()
     hours = Decimal(minutes) / Decimal('60')
 
     progress, _ = DailyProgress.objects.get_or_create(

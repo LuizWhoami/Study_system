@@ -19,7 +19,7 @@
   --radius-lg: 16px;
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
-  --transition: 0.2s ease-in-out;
+  --
   --font: 'Inter', -apple-system, system-ui, sans-serif;
   --navbar-height: 68px;
 }
@@ -34,10 +34,9 @@ body {
 ::-webkit-scrollbar { width:5px; }
 ::-webkit-scrollbar-track { background:var(--bg-body); }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
-h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-weight: 600; }
 .text-muted { color: var(--text-tertiary) !important; }
 .text-primary { color: var(--primary) !important; }
-a { color: var(--primary-light); text-decoration: none; transition: color 0.2s; }
+a { color: var(--primary-light); text-decoration: none;  }
 a:hover { color: var(--primary); }
 .navbar-top {
   position: fixed;
@@ -75,7 +74,7 @@ a:hover { color: var(--primary); }
   border-radius: var(--radius-sm);
   font-weight: 500;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  
 }
 .navbar-top .navbar-links a:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
 .navbar-top .navbar-links a.active { color: var(--text-primary); background: rgba(108,99,255,0.10); }
@@ -90,7 +89,7 @@ a:hover { color: var(--primary); }
   color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 500;
-  transition: all 0.2s;
+  
   text-decoration: none;
 }
 .navbar-top .btn-logout:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
@@ -116,7 +115,7 @@ a:hover { color: var(--primary); }
     gap: 0.25rem;
     border-bottom: 1px solid var(--border);
     transform: translateY(-120%);
-    transition: transform 0.2s;
+    
     margin-left:0;
   }
   .navbar-top .navbar-links.open { transform: translateY(0); }
@@ -137,20 +136,19 @@ a:hover { color: var(--primary); }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s;
+  
   color: var(--text-secondary);
 }
 .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .card .card-header { background: transparent; border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; font-weight: 600; color: var(--text-primary); }
 .card .card-body { padding: 1.25rem; }
-.card .card-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); font-weight: 600; margin-bottom: 0.5rem; }
 .card .display-6 { font-size: 2rem; font-weight: 700; color: var(--text-primary); }
 .btn {
   border-radius: 2rem;
   padding: 0.5rem 1.5rem;
   font-weight: 600;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  
   border: none;
   display: inline-flex;
   align-items: center;
@@ -170,21 +168,6 @@ a:hover { color: var(--primary); }
 .btn-warning:hover { transform: scale(1.02); }
 .btn-outline-primary { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
 .btn-outline-primary:hover { background: var(--primary); color: #fff; }
-.form-control, .form-select {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 1rem;
-  color: var(--text-primary);
-  transition: all 0.2s;
-}
-.form-control:focus, .form-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(108,99,255,0.12);
-  background: rgba(255,255,255,0.05);
-}
-.form-control::placeholder { color: var(--text-tertiary); }
-.form-label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem; }
 .badge { font-weight: 500; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.7rem; }
 .badge-primary { background: rgba(108,99,255,0.15); color: #8B83FF; }
 .badge-success { background: rgba(34,197,94,0.15); color: #22C55E; }
@@ -202,9 +185,7 @@ a:hover { color: var(--primary); }
   border-radius: var(--radius-lg);
   margin-bottom: 2rem;
 }
-.hero-section h1 { font-size: 2.8rem; font-weight: 700; margin-bottom: 0.5rem; }
-.hero-section p { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 1.5rem; }
-@media (max-width:768px) { .hero-section h1 { font-size: 2rem; } .hero-section p { font-size: 1rem; } .hero-section { padding: 2rem 1rem; } }
+@media (max-width:768px) { .hero-section { padding: 2rem 1rem; } }
 .table { color: var(--text-secondary); }
 .table thead th { color: var(--text-primary); border-bottom: 1px solid var(--border); }
 .table td { border-bottom: 1px solid var(--border); }
@@ -213,3 +194,408 @@ a:hover { color: var(--primary); }
 .modal-footer { border-top: 1px solid var(--border); }
 .modal-title { color: var(--text-primary); }
 .btn-close { filter: invert(1); }
+/* ============================================================
+   FORMS — seção definitiva e consolidada (2026-10-13)
+   Único bloco que controla inputs, selects, textareas.
+   ============================================================ */
+
+/* --- Estado normal --- */
+.form-control,
+.form-select,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="range"]),
+textarea,
+select {
+  background-color: #171725 !important;
+  background-image: none !important;
+  color: #F8FAFF !important;
+  -webkit-text-fill-color: #F8FAFF !important;
+  caret-color: #F8FAFF !important;
+  border: 1px solid #252538 !important;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  opacity: 1 !important;
+  
+  outline: none;
+}
+
+/* --- Focus (o ponto crítico) --- */
+.form-control:focus,
+.form-select:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="range"]):focus,
+textarea:focus,
+select:focus {
+  background-color: #1d1d2e !important;
+  background-image: none !important;
+  color: #F8FAFF !important;
+  -webkit-text-fill-color: #F8FAFF !important;
+  caret-color: #F8FAFF !important;
+  border-color: #6C63FF !important;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15) !important;
+  outline: 0 !important;
+}
+
+/* --- Active (durante clique) --- */
+.form-control:active,
+.form-select:active,
+input:active,
+textarea:active,
+select:active {
+  background-color: #1d1d2e !important;
+  color: #F8FAFF !important;
+  -webkit-text-fill-color: #F8FAFF !important;
+}
+
+/* --- Combate variáveis do Bootstrap --- */
+:root,
+body,
+html {
+  --bs-body-bg: #171725 !important;
+  --bs-body-color: #F8FAFF !important;
+  --bs-form-control-bg: #171725 !important;
+  --bs-form-control-color: #F8FAFF !important;
+  --bs-form-control-border-color: #252538 !important;
+  --bs-form-control-focus-bg: #1d1d2e !important;
+}
+
+/* --- Autofill Chrome --- */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #F8FAFF !important;
+  -webkit-box-shadow: 0 0 0 1000px #171725 inset !important;
+  box-shadow: 0 0 0 1000px #171725 inset !important;
+  caret-color: #F8FAFF !important;
+  background-color: #171725 !important;
+  
+}
+
+/* --- Placeholder --- */
+.form-control::placeholder,
+.form-select::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: #6B6B8A !important;
+  -webkit-text-fill-color: #6B6B8A !important;
+  opacity: 1 !important;
+}
+
+/* --- Desabilitado --- */
+.form-control:disabled,
+.form-control[readonly],
+select:disabled,
+input:disabled {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  color: #A0A8C0 !important;
+  -webkit-text-fill-color: #A0A8C0 !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+}
+
+/* --- <option> do dropdown --- */
+select option {
+  background-color: #171725 !important;
+  color: #F8FAFF !important;
+}
+select option:checked {
+  background-color: #6C63FF !important;
+  color: #FFFFFF !important;
+}
+
+/* --- Labels --- */
+.form-label {
+  color: #D0D4E8 !important;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+/* --- Input type=date --- */
+input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(1);
+}
+
+/* --- Input file --- */
+input[type="file"].form-control {
+  padding: 0.4rem 0.75rem;
+  color: #D0D4E8 !important;
+}
+input[type="file"]::file-selector-button {
+  background: rgba(108, 99, 255, 0.15);
+  color: #F8FAFF;
+  border: 1px solid #252538;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover {
+  background: rgba(108, 99, 255, 0.25);
+}
+
+/* ============================================================
+   2026-10-13 — inputs SEM animação nenhuma
+   ============================================================
+   Removidas todas as transitions que causavam esmaecimento
+   no texto ao focar/digitar.
+   ============================================================ */
+
+.form-control,
+.form-select,
+input,
+textarea,
+select,
+input:focus,
+textarea:focus,
+select:focus,
+.form-control:focus,
+.form-select:focus {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ============================================================
+   TIPOGRAFIA — escala e refinamento (2026-10-13)
+   ============================================================
+   Base: Inter. Escala 1.25 (títulos) + 1.15 (corpo).
+   Títulos grandes ganham letter-spacing negativo.
+   Números usam tabular-nums.
+   ============================================================ */
+
+/* --- Reset base --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 0.9375rem;   /* 15px */
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';  /* Inter: alternativas mais legíveis */
+}
+
+/* --- Títulos --- */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  margin: 0;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 2rem;          /* 32px */
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.022em;
+}
+
+h2 {
+  font-size: 1.5rem;        /* 24px */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+}
+
+h3 {
+  font-size: 1.25rem;       /* 20px */
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+}
+
+h4 {
+  font-size: 1rem;          /* 16px */
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+
+h5 {
+  font-size: 0.875rem;      /* 14px */
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+h6 {
+  font-size: 0.8125rem;     /* 13px */
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+/* --- Parágrafos --- */
+p {
+  margin: 0 0 1rem;
+  line-height: 1.6;
+}
+
+p:last-child { margin-bottom: 0; }
+
+/* --- Texto pequeno --- */
+small,
+.text-small {
+  font-size: 0.8125rem;   /* 13px */
+  line-height: 1.5;
+}
+
+.text-xs {
+  font-size: 0.75rem;     /* 12px */
+  line-height: 1.4;
+}
+
+.text-muted {
+  color: var(--text-tertiary) !important;
+}
+
+/* --- Links --- */
+a {
+  font-weight: 500;
+}
+
+/* --- Labels de card (UPPERCASE) --- */
+.card-title,
+.card .card-title {
+  font-size: 0.6875rem;    /* 11px */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+}
+
+/* --- Números tabulares (timer, estatísticas) --- */
+.study-timer__time,
+.calendar-day__number,
+.stat-card .number,
+.card .display-6,
+.numeric,
+[data-elapsed] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.01em;
+}
+
+/* --- Formulários --- */
+.form-label {
+  font-size: 0.8125rem;    /* 13px */
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+  margin-bottom: 0.375rem;
+}
+
+input, select, textarea,
+.form-control, .form-select {
+  font-family: inherit;
+  font-size: 0.9375rem;    /* 15px */
+  line-height: 1.4;
+}
+
+/* --- Botões --- */
+.btn {
+  font-weight: 600;
+  font-size: 0.875rem;     /* 14px */
+  letter-spacing: -0.005em;
+}
+
+.btn-sm {
+  font-size: 0.8125rem;    /* 13px */
+}
+
+/* --- Navbar --- */
+.navbar-top .navbar-brand {
+  font-weight: 700;
+  font-size: 1.125rem;     /* 18px */
+  letter-spacing: -0.02em;
+}
+
+.navbar-top .navbar-links a {
+  font-weight: 500;
+  font-size: 0.875rem;     /* 14px */
+}
+
+.navbar-top .user-badge {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* --- Hero --- */
+.hero-section h1 {
+  font-size: 2.25rem;      /* 36px */
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.75rem;
+}
+
+.hero-section p {
+  font-size: 1.0625rem;    /* 17px */
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 640px;
+  margin: 0 auto 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .hero-section h1 { font-size: 1.75rem; }
+  .hero-section p  { font-size: 1rem; }
+}
+
+/* --- Badges --- */
+.badge {
+  font-size: 0.75rem;      /* 12px */
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 0.25rem 0.6rem;
+}
+
+/* --- Tabelas --- */
+.table {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.table thead th {
+  font-weight: 600;
+  font-size: 0.8125rem;    /* 13px */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+/* --- Blockquote / código --- */
+code, pre, kbd {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 0.875em;
+}
+
+code {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--primary-light);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}

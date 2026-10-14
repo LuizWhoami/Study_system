@@ -4,6 +4,45 @@
 
 {% block extra_css %}
 <style>
+  /* FIX 2026-10-13 — mata qualquer transição/animação no form */
+  input, textarea, select,
+  .form-control, .form-select,
+  input:focus, textarea:focus, select:focus,
+  .form-control:focus, .form-select:focus,
+  input:hover, textarea:hover, select:hover,
+  input:active, textarea:active, select:active {
+    transition: none !important;
+    animation: none !important;
+    -webkit-transition: none !important;
+    -webkit-animation: none !important;
+    background-image: none !important;
+  }
+
+  /* Cores fixas — sem chance de mudar */
+  input#id_name, input#id_organization, input#id_position,
+  input#id_main_topic, input#id_board, input#id_exam_date,
+  input#id_expected_date, input#id_goal_hours, input#id_goal_questions,
+  textarea#id_notes, select#id_status, select#id_priority {
+    background-color: #171725 !important;
+    color: #F8FAFF !important;
+    -webkit-text-fill-color: #F8FAFF !important;
+    caret-color: #F8FAFF !important;
+    border: 1px solid #252538 !important;
+  }
+
+  input#id_name:focus, input#id_organization:focus, input#id_position:focus,
+  input#id_main_topic:focus, input#id_board:focus, input#id_exam_date:focus,
+  input#id_expected_date:focus, input#id_goal_hours:focus, input#id_goal_questions:focus,
+  textarea#id_notes:focus, select#id_status:focus, select#id_priority:focus {
+    background-color: #171725 !important;
+    color: #F8FAFF !important;
+    -webkit-text-fill-color: #F8FAFF !important;
+    caret-color: #F8FAFF !important;
+    border-color: #6C63FF !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+  }
+
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1) opacity(0.6);
     cursor: pointer;

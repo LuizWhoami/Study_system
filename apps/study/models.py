@@ -220,6 +220,6 @@ class StudyContent(models.Model):
         }
         idx = min(self.review_count, 4)
         days = intervals.get(self.difficulty, [1, 3, 7, 14, 30])[idx]
-        self.next_review = timezone.now().date() + timedelta(days=days)
+        self.next_review = timezone.localdate() + timedelta(days=days)
         self.review_count += 1
         self.save()

@@ -250,7 +250,7 @@ def meu_plano(request):
     if not config:
         return redirect('study_config:config')
     
-    today = timezone.now().date()
+    today = timezone.localdate()
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
     
@@ -311,7 +311,7 @@ def stats_view(request):
     from decimal import Decimal
 
     user = request.user
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_of_week = today - timedelta(days=today.weekday())
 
     # Sessões de estudo

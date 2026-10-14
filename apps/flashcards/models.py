@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from apps.subjects.models import Topic
 from datetime import date, timedelta
+from django.utils import timezone
 
 class Flashcard(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='flashcards', verbose_name="Usuário")
@@ -47,5 +48,5 @@ class Flashcard(models.Model):
             else:
                 self.intervalo = int(self.intervalo * self.facilidade)
         self.vezes_revisado += 1
-        self.proxima_revisao = date.today() + timedelta(days=self.intervalo)
+        self.proxima_revisao = timezone.localdate() + timedelta(days=self.intervalo)
         self.save()

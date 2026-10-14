@@ -136,13 +136,13 @@ class LearningEngine:
                 priority += min(20, days_since)  # até 20
 
         # 4. Revisão vencida (StudyContent)
-        overdue_review = StudyContent.objects.filter(user=self.user, topic=topic, next_review__lt=timezone.now().date()).exists()
+        overdue_review = StudyContent.objects.filter(user=self.user, topic=topic, next_review__lt=timezone.localdate()).exists()
         if overdue_review:
             priority += 15
 
         # 5. Proximidade da prova (se contest fornecido e tiver exam_date)
         if contest and contest.exam_date:
-            days_until = (contest.exam_date - timezone.now().date()).days
+            days_until = (contest.exam_date - timezone.localdate()).days
             if days_until <= 30:
                 priority += max(0, (30 - days_until) * 0.5)  # até 15
 
@@ -188,7 +188,7 @@ class LearningEngine:
         # 1. Encontrar tópicos com revisão vencida (StudyContent)
         overdue_contents = StudyContent.objects.filter(
             user=self.user,
-            next_review__lt=timezone.now().date()
+            next_review__lt=timezone.localdate()
         ).select_related('topic')
         if overdue_contents.exists():
             # Priorizar o mais atrasado
@@ -197,7 +197,7 @@ class LearningEngine:
             return {
                 'type': 'review',
                 'topic': topic,
-                'reason': f'Revisão vencida há {(timezone.now().date() - content.next_review).days} dias.',
+                'reason': f'Revisão vencida há {(timezone.localdate() - content.next_review).days} dias.',
                 'estimated_time': 15,  # minutos
                 'questions_count': 5,
             }
@@ -263,7 +263,7 @@ class LearningEngine:
         """
         Retorna um resumo do dia com progresso, meta e próximas atividades.
         """
-        today = timezone.now().date()
+        today = timezone.localdate()
         # Meta diária (do perfil ou configuração)
         from apps.study_config.models import StudyConfig
         config = StudyConfig.objects.filter(user=self.user, is_active=True).first()

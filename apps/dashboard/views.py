@@ -19,7 +19,7 @@ WEEKDAYS_PT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 @login_required
 def index(request):
     user = request.user
-    today = timezone.now().date()
+    today = timezone.localdate()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
 
