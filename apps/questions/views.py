@@ -544,12 +544,177 @@ def error_log_detail(request, pk):
 
 @login_required
 def performance(request):
-    return HttpResponse('Análise de desempenho ainda não implementada.', status=501)
+    """
+    Página de performance/relatórios.
 
+    Query string:
+      ?periodo=7|30|90|all  (default: 30)
 
-# ============================================================
-# IMPORTAÇÃO — STUB
-# ============================================================
+    Métricas:
+      - KPIs gerais (tentativas, acurácia, tempo)
+      - Acurácia por matéria (bar chart)
+      - Acurácia por banca (doughnut top 5)
+      - Top 10 tópicos mais fracos (bar horizontal)
+      - Evolução diária (line chart, últimos N dias)
+    """
+    from datetime import timedelta
+
+    # ---- Período ----
+    periodo_map = {'7': 7, '30': 30, '90': 90, 'all': None}
+    periodo_key = request.GET.get('periodo', '30')
+    dias = periodo_map.get(periodo_key, 30)
+
+    hoje = timezone.localdate()
+    if dias:
+        data_inicio = hoje - timedelta(days=dias - 1)
+    else:
+        data_inicio = None
+
+    # ---- Base de tentativas ----
+    attempts = QuestionAttempt.objects.filter(user=request.user)
+    if data_inicio:
+        attempts = attempts.filter(data__date__gte=data_inicio)
+
+    # ---- KPIs gerais ----
+    total_attempts = attempts.count()
+    total_corretas = attempts.filter(correta=True).count()
+    acuracia_geral = round((total_corretas / total_attempts) * 100, 1) if total_attempts else 0
+    tempo_total = attempts.aggregate(t=Sum('tempo_gasto'))['t'] or 0
+    tempo_horas = round(tempo_total / 3600, 1)
+
+    total_questoes = Question.objects.filter(user=request.user).count()
+    topicos_cobertos = (
+        attempts.exclude(topic=None).values('topic').distinct().count()
+    )
+
+    # ---- Por matéria ----
+    por_materia = (
+        attempts
+        .filter(topic__isnull=False)
+        .values('topic__subject__name')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('-total')
+    )
+    materias_labels, materias_data = [], []
+    for row in por_materia[:10]:
+        nome = row['topic__subject__name'] or '—'
+        total = row['total']
+        acertos = row['corretas']
+        pct = round((acertos / total) * 100, 1) if total else 0
+        materias_labels.append(nome)
+        materias_data.append(pct)
+
+    # ---- Por banca ----
+    por_banca = (
+        attempts
+        .filter(question__banca__gt='')
+        .values('question__banca')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('-total')
+    )
+    bancas_labels, bancas_data = [], []
+    for row in por_banca[:5]:
+        bancas_labels.append(row['question__banca'])
+        bancas_data.append(row['corretas'])
+
+    # ---- Top 10 tópicos mais fracos ----
+    topicos_fracos = (
+        attempts
+        .filter(topic__isnull=False)
+        .values('topic__id', 'topic__name', 'topic__subject__name')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .filter(total__gte=2)
+    )
+    topicos_fracos = sorted(
+        [
+            {
+                'id': t['topic__id'],
+                'name': t['topic__name'],
+                'subject': t['topic__subject__name'],
+                'total': t['total'],
+                'acertos': t['corretas'],
+                'pct': round((t['corretas'] / t['total']) * 100, 1) if t['total'] else 0,
+            }
+            for t in topicos_fracos
+        ],
+        key=lambda x: x['pct'],
+    )[:10]
+
+    # ---- Evolução diária ----
+    # Se 'all' ou sem data, usa últimos 30 dias por padrão para o gráfico
+    evol_dias = dias or 30
+    evol_inicio = hoje - timedelta(days=evol_dias - 1)
+    evol_qs = (
+        attempts
+        .filter(data__date__gte=evol_inicio)
+        .extra(select={'dia': 'date(data)'})
+        .values('dia')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('dia')
+    )
+    evol_map = {
+        str(r['dia']): {
+            'total': r['total'],
+            'acertos': r['corretas'],
+            'acuracia': round((r['corretas'] / r['total']) * 100, 1) if r['total'] else 0,
+        }
+        for r in evol_qs
+    }
+    # Preenche dias faltantes com 0
+    evol_labels, evol_acuracia, evol_total = [], [], []
+    for i in range(evol_dias):
+        d = evol_inicio + timedelta(days=i)
+        key = d.isoformat()
+        info = evol_map.get(key, {'total': 0, 'acertos': 0, 'acuracia': 0})
+        evol_labels.append(d.strftime('%d/%m'))
+        evol_acuracia.append(info['acuracia'])
+        evol_total.append(info['total'])
+
+    context = {
+        'periodo': periodo_key,
+        'periodo_label': {
+            '7': 'Últimos 7 dias',
+            '30': 'Últimos 30 dias',
+            '90': 'Últimos 90 dias',
+            'all': 'Todo o período',
+        }.get(periodo_key, 'Últimos 30 dias'),
+
+        # KPIs
+        'total_attempts': total_attempts,
+        'total_corretas': total_corretas,
+        'acuracia_geral': acuracia_geral,
+        'tempo_horas': tempo_horas,
+        'total_questoes': total_questoes,
+        'topicos_cobertos': topicos_cobertos,
+
+        # Charts (JSON serializável)
+        'materias_labels': json.dumps(materias_labels),
+        'materias_data': json.dumps(materias_data),
+        'bancas_labels': json.dumps(bancas_labels),
+        'bancas_data': json.dumps(bancas_data),
+        'evol_labels': json.dumps(evol_labels),
+        'evol_acuracia': json.dumps(evol_acuracia),
+        'evol_total': json.dumps(evol_total),
+
+        # Tabela de tópicos fracos
+        'topicos_fracos': topicos_fracos,
+
+        # Doughnut acertos vs erros
+        'erros_count': total_attempts - total_corretas,
+    }
+    return render(request, 'questions/performance.html', context)
 
 @login_required
 def import_questions(request):

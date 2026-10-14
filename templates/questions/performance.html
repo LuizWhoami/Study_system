@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% block title %}Performance — Questões{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kpi-card {
+    background: var(--surface-elevated, #171725);
+    border: 1px solid var(--border, #252538);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+    height: 100%;
+  }
+  .kpi-card .kpi-icon { font-size: 1.5rem; }
+  .kpi-card .kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #F8FAFF;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    margin: 0.25rem 0;
+  }
+  .kpi-card .kpi-label {
+    color: var(--text-tertiary, #9CA3B5);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .chart-card {
+    background: var(--surface-elevated, #171725);
+    border: 1px solid var(--border, #252538);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    height: 100%;
+  }
+  .chart-card h6 {
+    color: #F8FAFF;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-wrap {
+    position: relative;
+    height: 260px;
+  }
+  .chart-wrap--tall { height: 320px; }
+
+  .weak-topic {
+    display: grid;
+    grid-template-columns: 1fr 80px 60px;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.875rem;
+  }
+  .weak-topic:last-child { border-bottom: none; }
+  .weak-topic__name {
+    color: var(--text-secondary, #D0D4E8);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .weak-topic__bar {
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .weak-topic__bar div {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s;
+  }
+  .weak-topic__pct {
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #F8FAFF;
+  }
+  .periodo-pills .btn { border-radius: 999px; font-size: 0.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ============ HEADER ============ #}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h2 class="text-light mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Performance</h2>
+    <small class="text-muted">{{ periodo_label }}</small>
+  </div>
+  <div class="btn-group periodo-pills" role="group">
+    <a href="?periodo=7"   class="btn btn-sm {% if periodo == '7' %}btn-primary{% else %}btn-outline-secondary{% endif %}">7 dias</a>
+    <a href="?periodo=30"  class="btn btn-sm {% if periodo == '30' %}btn-primary{% else %}btn-outline-secondary{% endif %}">30 dias</a>
+    <a href="?periodo=90"  class="btn btn-sm {% if periodo == '90' %}btn-primary{% else %}btn-outline-secondary{% endif %}">90 dias</a>
+    <a href="?periodo=all" class="btn btn-sm {% if periodo == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Tudo</a>
+  </div>
+</div>
+
+{# ============ KPIs ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon">🎯</div>
+      <div class="kpi-value">{{ acuracia_geral }}%</div>
+      <div class="kpi-label">Acurácia geral</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon">📝</div>
+      <div class="kpi-value">{{ total_attempts }}</div>
+      <div class="kpi-label">Tentativas</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-value">{{ tempo_horas }}h</div>
+      <div class="kpi-label">Tempo em questões</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon">📚</div>
+      <div class="kpi-value">{{ topicos_cobertos }}</div>
+      <div class="kpi-label">Tópicos treinados</div>
+    </div>
+  </div>
+</div>
+
+{# ============ LINHA 1 — Evolução + Doughnut ============ #}
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="chart-card">
+      <h6><i class="bi bi-activity"></i> Evolução da acurácia</h6>
+      <div class="chart-wrap chart-wrap--tall">
+        <canvas id="chartEvolucao"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="chart-card">
+      <h6><i class="bi bi-pie-chart"></i> Acertos vs Erros</h6>
+      <div class="chart-wrap chart-wrap--tall">
+        <canvas id="chartAcertosErros"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ LINHA 2 — Por matéria + Por banca ============ #}
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <div class="chart-card">
+      <h6><i class="bi bi-bar-chart"></i> Acurácia por matéria</h6>
+      <div class="chart-wrap">
+        <canvas id="chartMaterias"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="chart-card">
+      <h6><i class="bi bi-trophy"></i> Top bancas (acertos)</h6>
+      <div class="chart-wrap">
+        <canvas id="chartBancas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ LINHA 3 — Tópicos fracos ============ #}
+<div class="chart-card mb-4">
+  <h6><i class="bi bi-exclamation-triangle"></i> Top 10 tópicos mais fracos</h6>
+  {% if topicos_fracos %}
+    {% for t in topicos_fracos %}
+      <div class="weak-topic">
+        <span class="weak-topic__name" title="{{ t.subject }} › {{ t.name }}">
+          {{ t.subject }} › {{ t.name }}
+        </span>
+        <div class="weak-topic__bar">
+          <div style="width: {{ t.pct }}%; background: {% if t.pct < 40 %}#EF4444{% elif t.pct < 70 %}#F59E0B{% else %}#22C55E{% endif %};"></div>
+        </div>
+        <span class="weak-topic__pct">{{ t.pct }}%</span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-muted text-center py-3 mb-0">
+      Nenhum tópico com tentativas suficientes ainda. Resolva mais questões para gerar dados.
+    </p>
+  {% endif %}
+</div>
+
+{# ============ RODAPÉ ============ #}
+<div class="d-flex gap-2">
+  <a href="{% url 'questions:bank' %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Banco de questões
+  </a>
+  <a href="{% url 'questions:error_log' %}" class="btn btn-outline-danger">
+    <i class="bi bi-journal-x me-1"></i>Caderno de revisão
+  </a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  if (typeof Chart === 'undefined') {
+    console.warn('[performance] Chart.js não carregou');
+    return;
+  }
+
+  // ---- Cores do design system ----
+  const PRIMARY   = '#6C63FF';
+  const SECONDARY = '#00D2FF';
+  const SUCCESS   = '#22C55E';
+  const DANGER    = '#EF4444';
+  const WARNING   = '#F59E0B';
+  const GRID      = 'rgba(255,255,255,0.06)';
+  const TEXT      = '#D0D4E8';
+  const TEXT_DIM  = '#9CA3B5';
+
+  Chart.defaults.color = TEXT;
+  Chart.defaults.borderColor = GRID;
+  Chart.defaults.font.family = "'Inter', -apple-system, system-ui, sans-serif";
+  Chart.defaults.font.size = 12;
+
+  // ---- Dados injetados pelo Django ----
+  const materiasLabels = {{ materias_labels|safe }};
+  const materiasData   = {{ materias_data|safe }};
+  const bancasLabels   = {{ bancas_labels|safe }};
+  const bancasData     = {{ bancas_data|safe }};
+  const evolLabels     = {{ evol_labels|safe }};
+  const evolAcuracia   = {{ evol_acuracia|safe }};
+  const evolTotal      = {{ evol_total|safe }};
+  const totalAcertos   = {{ total_corretas }};
+  const totalErros     = {{ erros_count }};
+
+  // ---- 1) Evolução (linha) ----
+  const ctxEvol = document.getElementById('chartEvolucao');
+  if (ctxEvol) {
+    new Chart(ctxEvol, {
+      type: 'line',
+      data: {
+        labels: evolLabels,
+        datasets: [
+          {
+            label: 'Acurácia (%)',
+            data: evolAcuracia,
+            borderColor: PRIMARY,
+            backgroundColor: 'rgba(108,99,255,0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Tentativas',
+            data: evolTotal,
+            borderColor: SECONDARY,
+            backgroundColor: 'transparent',
+            borderDash: [4, 4],
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            borderWidth: 1.5,
+            yAxisID: 'y1',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { labels: { boxWidth: 12, padding: 12 } },
+          tooltip: { padding: 10 },
+        },
+        scales: {
+          x: { grid: { color: GRID }, ticks: { color: TEXT_DIM, maxRotation: 0, autoSkipPadding: 20 } },
+          y: {
+            position: 'left',
+            min: 0, max: 100,
+            grid: { color: GRID },
+            ticks: { color: TEXT_DIM, callback: v => v + '%' },
+          },
+          y1: {
+            position: 'right',
+            beginAtZero: true,
+            grid: { drawOnChartArea: false },
+            ticks: { color: TEXT_DIM, precision: 0 },
+          },
+        },
+      },
+    });
+  }
+
+  // ---- 2) Acertos vs Erros (doughnut) ----
+  const ctxAE = document.getElementById('chartAcertosErros');
+  if (ctxAE) {
+    new Chart(ctxAE, {
+      type: 'doughnut',
+      data: {
+        labels: ['Acertos', 'Erros'],
+        datasets: [{
+          data: [totalAcertos, totalErros],
+          backgroundColor: [SUCCESS, DANGER],
+          borderColor: '#171725',
+          borderWidth: 3,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } },
+          tooltip: {
+            padding: 10,
+            callbacks: {
+              label: (ctx) => {
+                const total = totalAcertos + totalErros;
+                const v = ctx.parsed;
+                const pct = total ? ((v / total) * 100).toFixed(1) : 0;
+                return ctx.label + ': ' + v + ' (' + pct + '%)';
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ---- 3) Acurácia por matéria (bar) ----
+  const ctxMat = document.getElementById('chartMaterias');
+  if (ctxMat) {
+    new Chart(ctxMat, {
+      type: 'bar',
+      data: {
+        labels: materiasLabels.length ? materiasLabels : ['Sem dados'],
+        datasets: [{
+          label: 'Acurácia (%)',
+          data: materiasData.length ? materiasData : [0],
+          backgroundColor: PRIMARY,
+          hoverBackgroundColor: '#8B83FF',
+          borderRadius: 6,
+          barThickness: 22,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { padding: 10, callbacks: { label: c => c.parsed.x + '%' } },
+        },
+        scales: {
+          x: { min: 0, max: 100, grid: { color: GRID }, ticks: { color: TEXT_DIM, callback: v => v + '%' } },
+          y: { grid: { display: false }, ticks: { color: TEXT } },
+        },
+      },
+    });
+  }
+
+  // ---- 4) Top bancas (bar vertical) ----
+  const ctxBancas = document.getElementById('chartBancas');
+  if (ctxBancas) {
+    new Chart(ctxBancas, {
+      type: 'bar',
+      data: {
+        labels: bancasLabels.length ? bancasLabels : ['Sem dados'],
+        datasets: [{
+          label: 'Acertos',
+          data: bancasData.length ? bancasData : [0],
+          backgroundColor: SECONDARY,
+          hoverBackgroundColor: '#33DBFF',
+          borderRadius: 6,
+          barThickness: 32,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { padding: 10 },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: TEXT } },
+          y: { beginAtZero: true, grid: { color: GRID }, ticks: { color: TEXT_DIM, precision: 0 } },
+        },
+      },
+    });
+  }
+
+})();
+</script>
+{% endblock %}
