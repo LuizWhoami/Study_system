@@ -1,4 +1,4 @@
-# Study System - Plataforma de Estudos para Concursos
+# Study System - Plataforma de Estudos
 
 Sistema completo para organização de estudos, com foco em produtividade, revisões e acompanhamento de desempenho.
 
