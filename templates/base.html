@@ -14,6 +14,7 @@
 
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/components/study-timer.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/navbar.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -35,7 +36,7 @@
       <a href="{% url 'contests:list' %}" class="{% if 'contests' in request.resolver_match.app_name and not 'general' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-briefcase"></i> Meus Estudos
       </a>
-      <a href="{% url 'notes:list' %}" class="{% if 'notes' in request.resolver_match.app_name %}active{% endif %}">
+      <a href="{% url 'notes:folder_list' %}" class="{% if 'notes' in request.resolver_match.app_name %}active{% endif %}">
         <i class="bi bi-sticky"></i> Notas
       </a>
       <a href="{% url 'flashcards:listar' %}" class="{% if 'flashcards' in request.resolver_match.app_name %}active{% endif %}">

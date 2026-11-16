@@ -1,171 +1,167 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Entrar | LS study{% endblock %}
+
+{% block title %}Entrar · LS Study{% endblock %}
 
 {% block extra_css %}
-<style>
-  body {
-    background: linear-gradient(145deg, #0f0c29, #302b63, #24243e);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-  .login-container {
-    max-width: 420px;
-    width: 100%;
-    padding: 1.5rem;
-  }
-  .login-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 2rem;
-    padding: 2.5rem 2rem;
-    box-shadow: 0 25px 50px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  .login-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 35px 60px -15px rgba(0,0,0,0.8);
-  }
-  .login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-  .login-header .logo-icon {
-    font-size: 3rem;
-    color: #a78bfa;
-    background: rgba(167, 139, 250, 0.15);
-    width: 80px;
-    height: 80px;
-    line-height: 80px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-bottom: 0.5rem;
-    border: 1px solid rgba(167, 139, 250, 0.2);
-    backdrop-filter: blur(4px);
-  }
-  .login-header h2 {
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -0.02em;
-    margin-top: 0.5rem;
-  }
-  .login-header p {
-    color: rgba(255,255,255,0.5);
-    font-weight: 400;
-    font-size: 0.95rem;
-  }
-  .form-control {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 1.25rem;
-    padding: 0.85rem 1.25rem;
-    color: #f1f5f9;
-    font-weight: 400;
-    transition: all 0.2s ease;
-  }
-  .form-control:focus {
-    background: rgba(255,255,255,0.07);
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
-    color: #fff;
-  }
-  .form-control::placeholder {
-    color: rgba(255,255,255,0.3);
-    font-weight: 300;
-  }
-  .form-label {
-    color: rgba(255,255,255,0.6);
-    font-weight: 500;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, #7c3aed, #6d28d9);
-    border: none;
-    border-radius: 1.5rem;
-    padding: 0.85rem;
-    font-weight: 600;
-    color: #fff;
-    transition: all 0.25s ease;
-    box-shadow: 0 8px 20px -8px rgba(124, 58, 237, 0.4);
-  }
-  .btn-primary:hover {
-    transform: scale(1.02);
-    box-shadow: 0 12px 28px -8px rgba(124, 58, 237, 0.6);
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .text-link {
-    color: #a78bfa;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
-  }
-  .text-link:hover {
-    color: #c4b5fd;
-    text-decoration: underline;
-  }
-  .alert-danger {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 1rem;
-    color: #fca5a5;
-    padding: 0.75rem 1rem;
-    backdrop-filter: blur(4px);
-  }
-  .hr-divider {
-    border: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    margin: 1.5rem 0;
-  }
-  @media (max-width: 480px) {
-    .login-card { padding: 2rem 1.25rem; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth/login.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <div class="logo-icon"><i class="bi bi-mortarboard-fill"></i></div>
-      <h2>LS Study</h2>
-      <p>Organize, estude e conquiste seus objetivos</p>
+<div class="auth-shell">
+
+  <div class="auth-bg" aria-hidden="true">
+    <div class="auth-bg__orb auth-bg__orb--1"></div>
+    <div class="auth-bg__orb auth-bg__orb--2"></div>
+    <div class="auth-bg__orb auth-bg__orb--3"></div>
+  </div>
+
+  <div class="auth-grid">
+
+    {# ---------- Coluna do formulário ---------- #}
+    <div class="auth-form-panel">
+      <div class="auth-card">
+
+        <header class="auth-card__header">
+          <div class="auth-logo">
+            <i class="bi bi-mortarboard-fill"></i>
+          </div>
+          <h1>Bem-vindo de volta</h1>
+          <p>Entre para continuar seus estudos</p>
+        </header>
+
+        <form method="post" class="auth-form" autocomplete="on">
+          {% csrf_token %}
+
+          {# Preserva redirect pós-login (?next=/algum/lugar/) #}
+          {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+
+          {% if form.errors %}
+            <div class="auth-error" role="alert" aria-live="polite">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div>
+                <strong>Credenciais inválidas</strong>
+                <span>Verifique seu usuário e senha e tente novamente.</span>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="auth-field">
+            <label for="id_username">Usuário</label>
+            <div class="auth-input">
+              <i class="bi bi-person"></i>
+              <input
+                type="text"
+                name="username"
+                id="id_username"
+                placeholder="Digite seu usuário"
+                autocomplete="username"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                value="{{ form.username.value|default:'' }}"
+                required
+                autofocus>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <div class="auth-field__row">
+              <label for="id_password">Senha</label>
+            </div>
+            <div class="auth-input">
+              <i class="bi bi-lock"></i>
+              <input
+                type="password"
+                name="password"
+                id="id_password"
+                placeholder="Digite sua senha"
+                autocomplete="current-password"
+                required>
+              <button
+                type="button"
+                class="auth-toggle"
+                aria-label="Mostrar senha"
+                aria-controls="id_password"
+                data-toggle-password>
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="auth-submit" data-submit>
+            <span class="auth-submit__label">
+              <i class="bi bi-box-arrow-in-right"></i>
+              Entrar
+            </span>
+            <span class="auth-submit__loading" aria-hidden="true">
+              <span class="auth-spinner"></span>
+              Entrando...
+            </span>
+          </button>
+        </form>
+
+        <div class="auth-divider"><span>ou</span></div>
+
+        <p class="auth-footer">
+          Não tem uma conta?
+          <a href="{% url 'accounts:signup' %}" class="auth-link">Criar conta</a>
+        </p>
+      </div>
     </div>
 
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-3">
-        <label for="username" class="form-label">Usuário</label>
-        <input type="text" name="username" id="username" class="form-control" placeholder="Digite seu usuário" required autofocus>
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">Senha</label>
-        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
-      </div>
-      {% if form.errors %}
-        <div class="alert-danger mb-3">
-          <i class="bi bi-exclamation-triangle me-1"></i> Usuário ou senha inválidos.
+    {# ---------- Coluna informativa (só desktop) ---------- #}
+    <aside class="auth-info-panel" aria-hidden="true">
+      <div class="auth-info">
+        <div class="auth-info__brand">
+          <i class="bi bi-mortarboard-fill"></i>
+          <span>LS Study</span>
         </div>
-      {% endif %}
-      <button type="submit" class="btn btn-primary w-100">
-        <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
-      </button>
-    </form>
 
-    <hr class="hr-divider">
-    <p class="text-center mb-0" style="color: rgba(255,255,255,0.5);">
-      Não tem uma conta? <a href="{% url 'accounts:signup' %}" class="text-link">Cadastre-se</a>
-    </p>
+        <h2>Seu próximo passo<br>começa aqui.</h2>
+
+        <p>Organize concursos, notas, flashcards, revisões e cronômetro — tudo em um só lugar.</p>
+
+        <ul class="auth-features">
+          <li><i class="bi bi-check2-circle"></i> Caderno de revisão inteligente</li>
+          <li><i class="bi bi-check2-circle"></i> Flashcards gerados por IA</li>
+          <li><i class="bi bi-check2-circle"></i> Cronômetro de estudo integrado</li>
+          <li><i class="bi bi-check2-circle"></i> Calendário de revisões</li>
+        </ul>
+      </div>
+    </aside>
+
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // Mostrar / esconder senha
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = btn.parentElement.querySelector('input');
+      if (!input) return;
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+      btn.setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha');
+      input.focus();
+    });
+  });
+
+  // Loading state no submit (o browser só dispara 'submit' se o form
+  // passar na validação nativa — required nos inputs)
+  var form = document.querySelector('.auth-form');
+  if (form) {
+    form.addEventListener('submit', function () {
+      var btn = form.querySelector('[data-submit]');
+      if (btn) btn.classList.add('is-loading');
+    });
+  }
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h2 class="mb-1"><i class="bi bi-folder2-open me-2"></i>Minhas pastas</h2>
+    <small class="text-muted">
+      {{ folders|length }} pasta{{ folders|length|pluralize }} · {{ total_notes }} nota{{ total_notes|pluralize }}
+    </small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'notes:folder_create' %}" class="btn btn-primary">
+      <i class="bi bi-folder-plus me-1"></i> Nova pasta
+    </a>
+    <a href="{% url 'notes:list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-list-ul me-1"></i> Todas as notas
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for folder in folders %}
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+      <div class="card h-100" style="border-left: 4px solid {{ folder.color }};">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <a href="{% url 'notes:folder_detail' folder.pk %}" class="text-decoration-none flex-grow-1">
+              <h5 class="card-title mb-1">
+                <i class="bi bi-folder-fill" style="color: {{ folder.color }};"></i>
+                {{ folder.name }}
+              </h5>
+            </a>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'notes:folder_update' folder.pk %}">Editar</a></li>
+                <li><a class="dropdown-item text-danger" href="{% url 'notes:folder_delete' folder.pk %}">Excluir</a></li>
+              </ul>
+            </div>
+          </div>
+          {% if folder.description %}
+            <p class="card-text text-muted small mb-2">{{ folder.description }}</p>
+          {% endif %}
+          <div class="text-muted small">
+            <i class="bi bi-sticky me-1"></i>
+            {{ folder.note_count }} nota{{ folder.note_count|pluralize }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    {% if not folderless_count %}
+      <div class="col-12">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Você ainda não tem pastas. Crie a primeira para organizar suas notas.
+          <a href="{% url 'notes:folder_create' %}" class="alert-link">Criar pasta</a>
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+
+  {% if folderless_count %}
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+      <div class="card h-100" style="border-left: 4px solid #6c757d;">
+        <div class="card-body">
+          <a href="{% url 'notes:folderless' %}" class="text-decoration-none">
+            <h5 class="card-title mb-1">
+              <i class="bi bi-folder text-muted"></i>
+              Sem pasta
+            </h5>
+          </a>
+          <div class="text-muted small">
+            <i class="bi bi-sticky me-1"></i>
+            {{ folderless_count }} nota{{ folderless_count|pluralize }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

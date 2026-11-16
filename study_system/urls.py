@@ -16,3 +16,8 @@ urlpatterns = [
     path('questions/', include('apps.questions.urls')),
     path('flashcards/', include('apps.flashcards.urls')),  # <-- adicione esta linha
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    if getattr(settings, 'MEDIA_URL', ''):
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

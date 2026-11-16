@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    {% if folder %}
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'notes:folder_list' %}">Pastas</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ folder.name }}</li>
+        </ol>
+      </nav>
+      <h2 class="mb-1">
+        <i class="bi bi-folder-fill" style="color: {{ folder.color }};"></i>
+        {{ folder.name }}
+      </h2>
+      <small class="text-muted">
+        {% if folder.description %}{{ folder.description }} · {% endif %}
+        {{ notes|length }} nota{{ notes|length|pluralize }}
+      </small>
+    {% else %}
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'notes:folder_list' %}">Pastas</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Sem pasta</li>
+        </ol>
+      </nav>
+      <h2 class="mb-1"><i class="bi bi-folder text-muted"></i> Sem pasta</h2>
+      <small class="text-muted">{{ notes|length }} nota{{ notes|length|pluralize }}</small>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'notes:create' %}{% if folder %}?folder={{ folder.pk }}{% endif %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1"></i> Nova nota
+    </a>
+    {% if folder %}
+      <a href="{% url 'notes:folder_update' folder.pk %}" class="btn btn-outline-secondary">Editar pasta</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for note in notes %}
+    <div class="col-md-4 col-lg-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">
+            {% if note.is_favorite %}<i class="bi bi-star-fill text-warning me-1"></i>{% endif %}
+            {{ note.title }}
+          </h5>
+          <p class="card-text text-muted small">
+            <i class="bi bi-tag me-1"></i>
+            {% if note.topic %}{{ note.topic.name }}{% else %}<span class="text-muted">Sem tópico</span>{% endif %}
+          </p>
+          <p class="card-text small">{{ note.content|truncatewords:20 }}</p>
+          <div class="d-flex justify-content-between mt-3">
+            <a href="{% url 'notes:detail' note.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+            <a href="{% url 'notes:update' note.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'notes:delete' note.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhuma nota nesta pasta ainda.
+        <a href="{% url 'notes:create' %}{% if folder %}?folder={{ folder.pk }}{% endif %}" class="alert-link">Criar a primeira</a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
