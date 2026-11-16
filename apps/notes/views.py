@@ -79,10 +79,38 @@ class NoteUpdateView(LoginRequiredMixin, UpdateView):
 class NoteDeleteView(LoginRequiredMixin, DeleteView):
     model = Note
     template_name = 'notes/confirm_delete.html'
-    success_url = reverse_lazy('notes:list')
 
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Preserva ?next= para o POST (validação de segurança na view)
+        ctx['next_url'] = self.request.GET.get('next', '')
+        return ctx
+
+    def get_success_url(self):
+        from django.utils.http import url_has_allowed_host_and_scheme
+
+        # 1) ?next= explícito (com validação de segurança)
+        next_url = (
+            self.request.POST.get('next')
+            or self.request.GET.get('next')
+            or ''
+        )
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
+            return next_url
+
+        # 2) Nota tinha pasta → volta para a pasta
+        if self.object.folder_id:
+            return reverse_lazy('notes:folder_detail', kwargs={'pk': self.object.folder_id})
+
+        # 3) Sem pasta → grid de pastas
+        return reverse_lazy('notes:folder_list')
 
 class NoteDetailView(LoginRequiredMixin, DetailView):
     model = Note

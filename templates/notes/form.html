@@ -103,6 +103,11 @@
         <form method="post" id="note-form">
           {% csrf_token %}
           <div class="mb-3">
+            <label for="id_folder" class="form-label">Pasta <span class="text-muted">(opcional)</span></label>
+            {{ form.folder }}
+          </div>
+
+          <div class="mb-3">
             <label for="id_title" class="form-label">Título</label>
             <input type="text" name="title" id="id_title" class="form-control" value="{{ form.instance.title }}" required>
           </div>

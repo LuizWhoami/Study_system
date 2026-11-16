@@ -33,7 +33,12 @@
       <i class="bi bi-plus-circle me-1"></i> Nova nota
     </a>
     {% if folder %}
-      <a href="{% url 'notes:folder_update' folder.pk %}" class="btn btn-outline-secondary">Editar pasta</a>
+      <a href="{% url 'notes:folder_update' folder.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil me-1"></i> Editar pasta
+      </a>
+      <a href="{% url 'notes:folder_delete' folder.pk %}" class="btn btn-outline-danger">
+        <i class="bi bi-trash me-1"></i> Excluir pasta
+      </a>
     {% endif %}
   </div>
 </div>
@@ -52,10 +57,24 @@
             {% if note.topic %}{{ note.topic.name }}{% else %}<span class="text-muted">Sem tópico</span>{% endif %}
           </p>
           <p class="card-text small">{{ note.content|truncatewords:20 }}</p>
-          <div class="d-flex justify-content-between mt-3">
-            <a href="{% url 'notes:detail' note.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
-            <a href="{% url 'notes:update' note.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-            <a href="{% url 'notes:delete' note.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+          <div class="d-flex gap-2 mt-3 flex-wrap">
+            <a href="{% url 'notes:detail' note.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye me-1"></i> Ver
+            </a>
+            <a href="{% url 'notes:update' note.pk %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil me-1"></i> Editar
+            </a>
+            {% if folder %}
+              <a href="{% url 'notes:delete' note.pk %}?next={% url 'notes:folder_detail' folder.pk %}"
+                 class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Excluir
+              </a>
+            {% else %}
+              <a href="{% url 'notes:delete' note.pk %}?next={% url 'notes:folderless' %}"
+                 class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Excluir
+              </a>
+            {% endif %}
           </div>
         </div>
       </div>

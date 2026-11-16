@@ -19,6 +19,8 @@ class NoteForm(forms.ModelForm):
         fields = ['folder', 'topic', 'title', 'content', 'tags', 'is_favorite']
         widgets = {
             'content': forms.Textarea(attrs={'class': 'markdown-editor'}),
+            'folder': forms.Select(attrs={'class': 'form-select'}),
+            'topic': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, user, *args, **kwargs):
