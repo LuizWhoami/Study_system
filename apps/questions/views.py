@@ -37,6 +37,7 @@ from django.db.models import (
     Q, Count, Avg, Sum,
     Case, When, Value, FloatField, ExpressionWrapper, F,
 )
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from .models import (
@@ -59,7 +60,9 @@ class QuestionBankView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = Question.objects.filter(user=self.request.user)
+        qs = Question.objects.filter(user=self.request.user).exclude(
+            Q(attempts__user=self.request.user) | Q(errors__user=self.request.user)
+        ).distinct()
 
         topic = self.request.GET.get('topic')
         subject = self.request.GET.get('subject')
@@ -219,9 +222,9 @@ def resolve_question(request, pk):
     resposta_usuario = None
 
     if request.method == 'POST':
-        resposta_usuario = request.POST.get('resposta')
+        resposta_usuario = (request.POST.get('resposta') or '').strip().lower()
         if resposta_usuario:
-            acertou = (resposta_usuario == question.alternativa_correta)
+            acertou = (resposta_usuario == (question.alternativa_correta or '').strip().lower())
 
             QuestionAttempt.objects.create(
                 user=request.user,
@@ -399,7 +402,7 @@ def treino_responder(request):
         return redirect('questions:treino_inteligente')
 
     question_id = request.POST.get('question_id')
-    resposta = request.POST.get('resposta')
+    resposta = (request.POST.get('resposta') or '').strip().lower()
     tempo = int(request.POST.get('tempo', 0) or 0)
 
     if not question_id or not resposta:
@@ -407,7 +410,7 @@ def treino_responder(request):
         return redirect('questions:treino_sessao')
 
     question = get_object_or_404(Question, id=question_id, user=request.user)
-    acertou = (resposta == question.alternativa_correta)
+    acertou = (resposta == (question.alternativa_correta or '').strip().lower())
 
     QuestionAttempt.objects.create(
         user=request.user,
@@ -656,7 +659,7 @@ def performance(request):
     evol_qs = (
         attempts
         .filter(data__date__gte=evol_inicio)
-        .extra(select={'dia': 'date(data)'})
+        .annotate(dia=TruncDate('data', tzinfo=timezone.get_current_timezone()))
         .values('dia')
         .annotate(
             total=Count('id'),

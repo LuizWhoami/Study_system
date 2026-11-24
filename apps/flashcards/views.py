@@ -68,6 +68,10 @@ def listar_flashcards(request):
         ).order_by('-updated_at')[:10]
 
     total_pendentes = contadores['atrasados'] + contadores['hoje']
+    concluidos_count = todos.filter(
+        vezes_revisado__gt=0,
+        updated_at__date=hoje,
+    ).count()
 
     # Tópicos do usuário (para o dropdown de filtro)
     from apps.subjects.models import Topic
@@ -79,6 +83,11 @@ def listar_flashcards(request):
 
     context = {
         'flashcards':        todos,
+        'total_flashcards':  contadores['todos'],
+        'atrasados':         contadores['atrasados'],
+        'hoje':              contadores['hoje'],
+        'proximos':          contadores['proximos'],
+        'concluidos':        concluidos_count,
         'total_pendentes':   total_pendentes,
         'atrasados_list':    atrasados_list,
         'hoje_list':         hoje_list,

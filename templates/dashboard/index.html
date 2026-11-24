@@ -324,7 +324,7 @@
                 </div>
                 {% if s.status == 'planned' or s.status == 'in_progress' %}
                   <div class="task-actions">
-                    <a href="{% url 'study:study' %}?topic={{ s.topic.id }}"
+                    <a href="{% url 'study:study' %}{% if s.topic_id %}?topic={{ s.topic_id }}{% endif %}"
                        class="btn btn-sm btn-primary" title="Iniciar">
                       <i class="bi bi-play-fill"></i>
                     </a>
@@ -475,7 +475,7 @@
   const container = document.getElementById('pending-reviews-list');
   if (!container) return;
 
-  fetch('/estudo/pending-reviews/')
+  fetch('{% url 'study:pending_reviews' %}')
     .then(r => r.json())
     .then(data => {
       if (!data.length) {
