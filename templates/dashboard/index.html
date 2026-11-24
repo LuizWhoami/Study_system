@@ -2,53 +2,335 @@
 {% load static %}
 {% block title %}Dashboard{% endblock %}
 
-{% block content %}
-<!-- ===== HERO ===== -->
-<div class="hero-section mb-4">
-  <h1>Bom dia, {{ user.username }} 👋</h1>
-  <p>Vamos continuar seus estudos?</p>
-</div>
+{% block extra_css %}
+<style>
+  .dash-page { max-width: 1200px; margin: 0 auto; }
 
-<!-- ===== TAREFA DO DIA (PlannedSession) ===== -->
-<div class="row g-4 mb-4">
-  <div class="col-md-7">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-header bg-dark border-secondary d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Tarefas de hoje</h5>
+  /* ---------- Header ---------- */
+  .dash-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .dash-greeting {
+    font-size: 1.75rem; font-weight: 700; color: #F8FAFF;
+    letter-spacing: -0.02em; margin: 0 0 .35rem;
+  }
+  .dash-greeting em { font-style: normal; color: #A78BFA; }
+  .dash-context {
+    display: flex; flex-wrap: wrap; gap: 1rem;
+    font-size: .85rem; color: rgba(248,250,255,.55);
+  }
+  .dash-context span { display: inline-flex; align-items: center; gap: .3rem; }
+  .dash-context i { color: #8B7FFF; }
+  .dash-context .urgent { color: #FCA5A5; }
+  .dash-context .urgent i { color: #F87171; }
+
+  .dash-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  /* ---------- KPIs ---------- */
+  .dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .dash-kpi {
+    background: rgba(23,23,37,.6);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .dash-kpi:hover { border-color: rgba(108,99,255,.3); transform: translateY(-2px); }
+  .dash-kpi__top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: .6rem;
+  }
+  .dash-kpi__label { font-size: .75rem; color: rgba(248,250,255,.5); text-transform: uppercase; letter-spacing: .05em; }
+  .dash-kpi__icon { font-size: 1.1rem; color: #8B7FFF; }
+  .dash-kpi__value { font-size: 1.5rem; font-weight: 700; color: #F8FAFF; line-height: 1.1; }
+  .dash-kpi__hint { font-size: .72rem; color: rgba(248,250,255,.35); margin-top: .15rem; }
+  .dash-kpi--success .dash-kpi__icon { color: #34D399; }
+  .dash-kpi--warning .dash-kpi__icon { color: #FBBF24; }
+  .dash-kpi--danger  .dash-kpi__icon { color: #F87171; }
+  .dash-kpi--danger  .dash-kpi__value { color: #FCA5A5; }
+
+  /* ---------- 2 colunas principais ---------- */
+  .dash-main {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 1.25rem; margin-bottom: 1.25rem;
+  }
+  @media (max-width: 900px) { .dash-main { grid-template-columns: 1fr; } }
+
+  .dash-card {
+    background: rgba(23,23,37,.6);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .dash-card__head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .dash-card__title {
+    font-size: .95rem; font-weight: 600; color: #F8FAFF;
+    margin: 0; display: flex; align-items: center; gap: .5rem;
+  }
+  .dash-card__title i { color: #8B7FFF; }
+  .dash-card__body { padding: 1rem 1.25rem; }
+
+  /* ---------- Tarefas de hoje ---------- */
+  .task-list { display: flex; flex-direction: column; gap: .5rem; }
+  .task-item {
+    display: flex; align-items: center; gap: .85rem;
+    padding: .85rem 1rem;
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.05);
+    border-left: 3px solid rgba(108,99,255,.5);
+    border-radius: 10px;
+    transition: border-color .15s, background .15s;
+  }
+  .task-item:hover { background: rgba(255,255,255,.04); border-left-color: #8B7FFF; }
+  .task-item--completed { border-left-color: #10B981; opacity: .75; }
+  .task-item--skipped   { border-left-color: #6B7280; opacity: .6; }
+  .task-item--in_progress { border-left-color: #F59E0B; }
+
+  .task-badge {
+    display: inline-flex; align-items: center;
+    padding: .15rem .5rem;
+    font-size: .68rem; font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .task-badge--study      { background: rgba(108,99,255,.15); color: #C4B5FD; }
+  .task-badge--review     { background: rgba(245,158,11,.15); color: #FBBF24; }
+  .task-badge--questions  { background: rgba(6,182,212,.15);  color: #67E8F9; }
+  .task-badge--flashcards { background: rgba(139,127,255,.15); color: #C4B5FD; }
+  .task-badge--done       { background: rgba(16,185,129,.15); color: #6EE7B7; }
+  .task-badge--skipped    { background: rgba(107,114,128,.15); color: #9CA3AF; }
+  .task-badge--running    { background: rgba(245,158,11,.15); color: #FBBF24; }
+
+  .task-main { flex: 1; min-width: 0; }
+  .task-title { font-weight: 600; color: #F8FAFF; font-size: .9rem; margin: 0; }
+  .task-meta { font-size: .76rem; color: rgba(248,250,255,.45); margin-top: .2rem; }
+  .task-actions { display: flex; gap: .35rem; }
+
+  .task-empty {
+    text-align: center; padding: 2rem 1rem;
+    color: rgba(248,250,255,.5);
+  }
+  .task-empty i { font-size: 2.2rem; color: rgba(139,127,255,.4); margin-bottom: .5rem; display: block; }
+
+  /* ---------- Sugestão IA ---------- */
+  .suggest-card {
+    display: flex; flex-direction: column; gap: .75rem;
+    padding: 1.1rem;
+    background: linear-gradient(135deg, rgba(108,99,255,.08), rgba(139,127,255,.02));
+    border: 1px solid rgba(108,99,255,.2);
+    border-radius: 12px;
+  }
+  .suggest-card__label {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+    color: #A78BFA; font-weight: 600;
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .suggest-card__subject { font-size: .78rem; color: rgba(248,250,255,.5); }
+  .suggest-card__topic { font-size: 1rem; font-weight: 700; color: #F8FAFF; margin: .1rem 0 .3rem; }
+  .suggest-card__reason { font-size: .82rem; color: rgba(248,250,255,.65); line-height: 1.4; }
+  .suggest-card__meta { display: flex; gap: .4rem; flex-wrap: wrap; margin: .5rem 0; }
+  .suggest-card__meta span {
+    display: inline-flex; align-items: center; gap: .25rem;
+    font-size: .72rem; padding: .2rem .55rem;
+    background: rgba(255,255,255,.06); color: rgba(248,250,255,.7);
+    border-radius: 100px;
+  }
+
+  /* ---------- Agenda semanal compacta ---------- */
+  .week-bar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: .5rem;
+  }
+  @media (max-width: 600px) { .week-bar { grid-template-columns: repeat(4, 1fr); } }
+  .week-day {
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 10px;
+    padding: .75rem .5rem;
+    text-align: center;
+    min-height: 90px;
+  }
+  .week-day--today {
+    border-color: rgba(108,99,255,.5);
+    background: rgba(108,99,255,.08);
+  }
+  .week-day__name { font-size: .72rem; font-weight: 600; color: rgba(248,250,255,.6); text-transform: uppercase; letter-spacing: .05em; }
+  .week-day--today .week-day__name { color: #A78BFA; }
+  .week-day__date { font-size: .8rem; color: rgba(248,250,255,.4); margin-bottom: .4rem; }
+  .week-day__count {
+    display: inline-block;
+    padding: .1rem .5rem;
+    font-size: .72rem; font-weight: 700;
+    background: rgba(108,99,255,.15); color: #C4B5FD;
+    border-radius: 100px;
+  }
+  .week-day__count--empty { background: rgba(255,255,255,.03); color: rgba(248,250,255,.3); }
+  .week-day__count--done  { background: rgba(16,185,129,.15); color: #6EE7B7; }
+
+  /* ---------- Rodapé: 2 colunas ---------- */
+  .dash-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 900px) { .dash-bottom { grid-template-columns: 1fr; } }
+
+  .weak-item {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .7rem .9rem;
+    background: rgba(239,68,68,.05);
+    border: 1px solid rgba(239,68,68,.15);
+    border-radius: 10px;
+    margin-bottom: .5rem;
+  }
+  .weak-item:last-child { margin-bottom: 0; }
+  .weak-item__main { flex: 1; min-width: 0; }
+  .weak-item__subject { font-size: .72rem; color: #FCA5A5; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .weak-item__topic { font-size: .88rem; color: #F8FAFF; font-weight: 500; margin-top: .1rem; }
+  .weak-item__mastery {
+    font-size: .78rem; font-weight: 700;
+    padding: .2rem .5rem;
+    background: rgba(239,68,68,.15); color: #FCA5A5;
+    border-radius: 6px;
+  }
+
+  .empty-mini {
+    text-align: center; padding: 1.5rem 1rem;
+    color: rgba(248,250,255,.45); font-size: .88rem;
+  }
+  .empty-mini i { font-size: 1.8rem; display: block; margin-bottom: .5rem; color: rgba(16,185,129,.5); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dash-kpi, .task-item { transition: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-page">
+
+  {# ---------- HEADER ---------- #}
+  <header class="dash-header">
+    <div>
+      <h1 class="dash-greeting">
+        Bom dia, <em>{{ user.username }}</em> 👋
+      </h1>
+      <div class="dash-context">
+        {% if proxima_prova %}
+          <span class="{% if proxima_prova.urgente %}urgent{% endif %}">
+            <i class="bi bi-flag-fill"></i>
+            {{ proxima_prova.concurso.name }} em
+            {% if proxima_prova.dias == 0 %}hoje{% elif proxima_prova.dias == 1 %}1 dia{% else %}{{ proxima_prova.dias }} dias{% endif %}
+          </span>
+        {% endif %}
+        {% if streak > 0 %}
+          <span><i class="bi bi-fire"></i> {{ streak }} dia{{ streak|pluralize }} seguido{{ streak|pluralize }}</span>
+        {% endif %}
+        {% if total_tasks_count > 0 %}
+          <span><i class="bi bi-list-check"></i> {{ pending_tasks_count }} de {{ total_tasks_count }} tarefa{{ total_tasks_count|pluralize }} pendente{{ total_tasks_count|pluralize }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="dash-actions">
+      <a href="{% url 'study:study' %}" class="btn btn-primary">
+        <i class="bi bi-play-fill me-1"></i> Iniciar sessão
+      </a>
+    </div>
+  </header>
+
+  {# ---------- KPIs ---------- #}
+  <section class="dash-kpis">
+    <div class="dash-kpi dash-kpi--success">
+      <div class="dash-kpi__top">
+        <span class="dash-kpi__label">Hoje</span>
+        <i class="bi bi-clock-history dash-kpi__icon"></i>
+      </div>
+      <div class="dash-kpi__value">{{ hours_today }}h</div>
+      <div class="dash-kpi__hint">Meta: {{ daily_goal_hours }}h</div>
+    </div>
+
+    <div class="dash-kpi">
+      <div class="dash-kpi__top">
+        <span class="dash-kpi__label">Questões</span>
+        <i class="bi bi-check2-circle dash-kpi__icon"></i>
+      </div>
+      <div class="dash-kpi__value">{{ questions_today }}</div>
+      <div class="dash-kpi__hint">Acertos: {{ accuracy }}%</div>
+    </div>
+
+    <div class="dash-kpi">
+      <div class="dash-kpi__top">
+        <span class="dash-kpi__label">Progresso</span>
+        <i class="bi bi-graph-up-arrow dash-kpi__icon"></i>
+      </div>
+      <div class="dash-kpi__value">{{ progress_general }}%</div>
+      <div class="dash-kpi__hint">Média geral</div>
+    </div>
+
+    <div class="dash-kpi {% if flashcards_pendentes > 0 %}dash-kpi--warning{% endif %}">
+      <div class="dash-kpi__top">
+        <span class="dash-kpi__label">Flashcards</span>
+        <i class="bi bi-card-checklist dash-kpi__icon"></i>
+      </div>
+      <div class="dash-kpi__value">{{ flashcards_pendentes }}</div>
+      <div class="dash-kpi__hint">
+        {% if flashcards_pendentes > 0 %}para revisar hoje{% else %}em dia{% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# ---------- MATÉRIAS DO DIA + SUGESTÃO IA ---------- #}
+  <section class="dash-main">
+    <div class="dash-card">
+      <div class="dash-card__head">
+        <h2 class="dash-card__title"><i class="bi bi-list-task"></i> Matérias de hoje</h2>
         <a href="{% url 'study_config:meu_plano' %}" class="btn btn-sm btn-outline-secondary">
-          <i class="bi bi-calendar-week"></i> Plano completo
+          Plano completo <i class="bi bi-arrow-right"></i>
         </a>
       </div>
-      <div class="card-body">
+      <div class="dash-card__body">
         {% if today_sessions %}
-          <ul class="list-group list-group-flush">
+          <div class="task-list">
             {% for s in today_sessions %}
-              <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                  <span class="badge bg-{% if s.session_type == 'study' %}primary{% elif s.session_type == 'review' %}warning text-dark{% elif s.session_type == 'questions' %}info text-dark{% elif s.session_type == 'flashcards' %}secondary{% else %}secondary{% endif %} me-2">
-                    {{ s.get_session_type_display }}
-                  </span>
-                  <strong>{{ s.topic.name|default:s.contest.name }}</strong>
-                  <br>
-                  <small class="text-muted">
-                    {{ s.start_time|time:"H:i" }} – {{ s.end_time|time:"H:i" }} · {{ s.duration_minutes }} min
-                  </small>
-                  {% if s.status == 'completed' %}
-                    <span class="badge bg-success ms-2"><i class="bi bi-check-lg"></i> Concluída</span>
-                  {% elif s.status == 'in_progress' %}
-                    <span class="badge bg-warning text-dark ms-2"><i class="bi bi-play-fill"></i> Em andamento</span>
-                  {% elif s.status == 'skipped' %}
-                    <span class="badge bg-secondary ms-2">Pulada</span>
-                  {% endif %}
+              <div class="task-item task-item--{{ s.status }}">
+                <div class="task-main">
+                  <div class="d-flex gap-2 align-items-center flex-wrap mb-1">
+                    <span class="task-badge task-badge--{{ s.session_type }}">{{ s.get_session_type_display }}</span>
+                    {% if s.status == 'completed' %}
+                      <span class="task-badge task-badge--done"><i class="bi bi-check-lg"></i> Concluída</span>
+                    {% elif s.status == 'in_progress' %}
+                      <span class="task-badge task-badge--running"><i class="bi bi-play-fill"></i> Em andamento</span>
+                    {% elif s.status == 'skipped' %}
+                      <span class="task-badge task-badge--skipped">Pulada</span>
+                    {% endif %}
+                  </div>
+                  <div class="task-title">{{ s.topic.name|default:s.contest.name }}</div>
+                  <div class="task-meta">
+                    <i class="bi bi-clock"></i> {{ s.start_time|time:"H:i" }} – {{ s.end_time|time:"H:i" }}
+                    · {{ s.duration_minutes }} min
+                  </div>
                 </div>
                 {% if s.status == 'planned' or s.status == 'in_progress' %}
-                  <div class="d-flex gap-1">
-                    <a href="{% url 'study:study' %}?topic={{ s.topic.id }}" class="btn btn-sm btn-success" title="Iniciar">
+                  <div class="task-actions">
+                    <a href="{% url 'study:study' %}?topic={{ s.topic.id }}"
+                       class="btn btn-sm btn-primary" title="Iniciar">
                       <i class="bi bi-play-fill"></i>
                     </a>
                     <form method="post" action="{% url 'study_config:session_complete' s.id %}" class="d-inline">
                       {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como concluída">
+                      <button type="submit" class="btn btn-sm btn-outline-success" title="Concluir">
                         <i class="bi bi-check-lg"></i>
                       </button>
                     </form>
@@ -60,13 +342,13 @@
                     </form>
                   </div>
                 {% endif %}
-              </li>
+              </div>
             {% endfor %}
-          </ul>
+          </div>
         {% else %}
-          <div class="text-center py-4">
-            <i class="bi bi-calendar-check fs-1 text-secondary"></i>
-            <p class="text-secondary mb-2 mt-2">Nenhuma tarefa planejada para hoje.</p>
+          <div class="task-empty">
+            <i class="bi bi-calendar-x"></i>
+            <p class="mb-2">Nenhuma tarefa planejada para hoje.</p>
             <a href="{% url 'study_config:meu_plano' %}" class="btn btn-sm btn-primary">
               <i class="bi bi-plus-circle me-1"></i> Ver plano da semana
             </a>
@@ -74,266 +356,158 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <!-- ===== PRÓXIMA ATIVIDADE (LearningEngine) ===== -->
-  <div class="col-md-5">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-header bg-dark border-secondary">
-        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Sugestão do sistema</h5>
+    <div class="dash-card">
+      <div class="dash-card__head">
+        <h2 class="dash-card__title"><i class="bi bi-lightbulb"></i> Sugestão</h2>
       </div>
-      <div class="card-body">
+      <div class="dash-card__body">
         {% if today_plan.next_activity %}
-          <div class="p-3 bg-dark bg-opacity-25 rounded border border-secondary">
-            <h6 class="text-primary mb-1">{{ today_plan.next_activity.topic.subject.name }}</h6>
-            <p class="mb-1"><strong>{{ today_plan.next_activity.topic.name }}</strong></p>
-            <p class="text-secondary small mb-2">{{ today_plan.next_activity.reason }}</p>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="badge bg-primary">{{ today_plan.next_activity.estimated_time }} min</span>
-              <span class="badge bg-secondary">{{ today_plan.next_activity.questions_count }} questões</span>
+          <div class="suggest-card">
+            <div class="suggest-card__label">
+              <i class="bi bi-stars"></i> Próxima atividade
             </div>
-            <a href="{% url 'study:study' %}?topic={{ today_plan.next_activity.topic.id }}" class="btn btn-primary btn-sm w-100">
+            <div class="suggest-card__subject">{{ today_plan.next_activity.topic.subject.name }}</div>
+            <div class="suggest-card__topic">{{ today_plan.next_activity.topic.name }}</div>
+            <div class="suggest-card__reason">{{ today_plan.next_activity.reason }}</div>
+            <div class="suggest-card__meta">
+              <span><i class="bi bi-clock"></i> {{ today_plan.next_activity.estimated_time }} min</span>
+              {% if today_plan.next_activity.questions_count %}
+                <span><i class="bi bi-question-circle"></i> {{ today_plan.next_activity.questions_count }} questões</span>
+              {% endif %}
+            </div>
+            <a href="{% url 'study:study' %}?topic={{ today_plan.next_activity.topic.id }}"
+               class="btn btn-primary btn-sm w-100">
               <i class="bi bi-play-fill"></i> Começar agora
             </a>
           </div>
         {% else %}
-          <p class="text-secondary mb-0">
-            <i class="bi bi-info-circle me-2"></i>
-            Nenhuma sugestão no momento. Continue estudando para gerar recomendações.
-          </p>
+          <div class="empty-mini">
+            <i class="bi bi-hourglass"></i>
+            Sem sugestão no momento. Continue estudando para gerar recomendações.
+          </div>
         {% endif %}
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- ===== CARDS DE RESUMO ===== -->
-<div class="row g-4 mb-4">
-  <div class="col-md-3 col-sm-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title text-secondary mb-0">Hoje</h6>
-          <i class="bi bi-clock-history fs-3 text-primary"></i>
-        </div>
-        <p class="display-6 mb-0">{{ hours_today }}h</p>
-        <small class="text-muted">Meta: {{ daily_goal_hours }}h</small>
+  {# ---------- AGENDA SEMANAL ---------- #}
+  <section class="dash-card" style="margin-bottom:1.25rem;">
+    <div class="dash-card__head">
+      <h2 class="dash-card__title"><i class="bi bi-calendar3"></i> Sua semana</h2>
+      <div class="d-flex gap-1 flex-wrap">
+        <span class="badge bg-secondary">{{ weekly_stats.completed_count }}/{{ weekly_stats.planned_count }}</span>
+        <span class="badge" style="background:rgba(108,99,255,.2); color:#C4B5FD;">{{ weekly_stats.percent }}%</span>
       </div>
     </div>
-  </div>
-  <div class="col-md-3 col-sm-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title text-secondary mb-0">Semana</h6>
-          <i class="bi bi-calendar-week fs-3 text-success"></i>
-        </div>
-        <p class="display-6 mb-0">{{ hours_week }}h</p>
-        <small class="text-muted">Últimos 7 dias</small>
+    <div class="dash-card__body">
+      <div class="week-bar">
+        {% for dia in week_by_day %}
+          <div class="week-day {% if dia.is_today %}week-day--today{% endif %}">
+            <div class="week-day__name">{{ dia.day_name }}</div>
+            <div class="week-day__date">{{ dia.date|date:"d/m" }}</div>
+            {% if dia.sessions %}
+              {% if dia.completed_minutes == dia.planned_minutes and dia.planned_minutes > 0 %}
+                <span class="week-day__count week-day__count--done">
+                  <i class="bi bi-check-lg"></i> {{ dia.sessions|length }}
+                </span>
+              {% else %}
+                <span class="week-day__count">{{ dia.sessions|length }}</span>
+              {% endif %}
+            {% else %}
+              <span class="week-day__count week-day__count--empty">—</span>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
     </div>
-  </div>
-  <div class="col-md-3 col-sm-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title text-secondary mb-0">Mês</h6>
-          <i class="bi bi-calendar-month fs-3 text-warning"></i>
-        </div>
-        <p class="display-6 mb-0">{{ hours_month }}h</p>
-        <small class="text-muted">Últimos 30 dias</small>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 col-sm-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title text-secondary mb-0">Questões</h6>
-          <i class="bi bi-check2-circle fs-3 text-info"></i>
-        </div>
-        <p class="display-6 mb-0">{{ questions_today }}</p>
-        <small class="text-muted">Acertos: {{ accuracy }}%</small>
-      </div>
-    </div>
-  </div>
-</div>
+  </section>
 
-<!-- ===== AGENDA DA SEMANA (PlannedSession) ===== -->
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card bg-dark text-light border-secondary">
-      <div class="card-header bg-dark border-secondary d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Agenda da semana</h5>
-        <div>
-          <span class="badge bg-secondary me-1">{{ weekly_stats.planned_count }} planejadas</span>
-          <span class="badge bg-success me-1">{{ weekly_stats.completed_count }} concluídas</span>
-          <span class="badge bg-primary">{{ weekly_stats.percent }}%</span>
+  {# ---------- REVISÕES + PONTOS FRACOS ---------- #}
+  <section class="dash-bottom">
+    <div class="dash-card">
+      <div class="dash-card__head">
+        <h2 class="dash-card__title"><i class="bi bi-calendar-check"></i> Revisões pendentes</h2>
+        <a href="{% url 'flashcards:listar' %}" class="btn btn-sm btn-outline-secondary">
+          Ver todas
+        </a>
+      </div>
+      <div class="dash-card__body" id="pending-reviews-list">
+        <div class="empty-mini">
+          <i class="bi bi-hourglass-split"></i>
+          Carregando...
         </div>
       </div>
-      <div class="card-body">
-        <div class="row g-2">
-          {% for dia in week_by_day %}
-            <div class="col-md-6 col-lg-3 col-xl">
-              <div class="p-2 bg-dark bg-opacity-25 rounded border {% if dia.is_today %}border-primary{% else %}border-secondary{% endif %} h-100">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <strong class="text-light">{{ dia.day_name }}</strong>
-                  <small class="text-muted">{{ dia.date|date:"d/m" }}</small>
-                </div>
-                {% if dia.is_today %}
-                  <span class="badge bg-primary mb-1">Hoje</span>
-                {% endif %}
-                {% if dia.sessions %}
-                  <ul class="list-unstyled mb-0">
-                    {% for s in dia.sessions %}
-                      <li class="small py-1 border-bottom border-secondary">
-                        <span class="badge bg-{% if s.session_type == 'study' %}primary{% elif s.session_type == 'review' %}warning text-dark{% elif s.session_type == 'questions' %}info text-dark{% elif s.session_type == 'flashcards' %}secondary{% else %}secondary{% endif %} me-1" style="font-size: 0.65rem;">
-                          {{ s.start_time|time:"H:i" }}
-                        </span>
-                        <span class="text-secondary">{{ s.topic.name|default:s.contest.name|truncatechars:18 }}</span>
-                        {% if s.status == 'completed' %}
-                          <i class="bi bi-check-circle-fill text-success ms-1"></i>
-                        {% elif s.status == 'in_progress' %}
-                          <i class="bi bi-play-circle-fill text-warning ms-1"></i>
-                        {% endif %}
-                      </li>
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <p class="text-muted small mb-0">— Sem sessões</p>
-                {% endif %}
-                {% if dia.planned_minutes > 0 %}
-                  <small class="text-muted d-block mt-1">
-                    {{ dia.completed_minutes }}/{{ dia.planned_minutes }} min
-                  </small>
-                {% endif %}
+    </div>
+
+    <div class="dash-card">
+      <div class="dash-card__head">
+        <h2 class="dash-card__title"><i class="bi bi-exclamation-triangle"></i> Pontos fracos</h2>
+        <a href="{% url 'questions:bank' %}" class="btn btn-sm btn-outline-secondary">
+          Praticar
+        </a>
+      </div>
+      <div class="dash-card__body">
+        {% if today_plan.weak_topics %}
+          {% for weak in today_plan.weak_topics %}
+            <div class="weak-item">
+              <div class="weak-item__main">
+                <div class="weak-item__subject">{{ weak.topic.subject.name }}</div>
+                <div class="weak-item__topic">{{ weak.topic.name }}</div>
               </div>
+              <div class="weak-item__mastery">{{ weak.mastery }}%</div>
             </div>
           {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== PROGRESSO E ÚLTIMAS SESSÕES ===== -->
-<div class="row g-4 mb-4">
-  <div class="col-md-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <h5 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>Progresso Geral</h5>
-        <div class="progress mb-3">
-          <div class="progress-bar" role="progressbar" style="width: {{ progress_general }}%;" aria-valuenow="{{ progress_general }}" aria-valuemin="0" aria-valuemax="100">{{ progress_general }}%</div>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span><i class="bi bi-fire text-danger me-1"></i> Streak: {{ streak }} dias</span>
-          <span><i class="bi bi-clock text-warning me-1"></i> Revisões: {{ reviews_pending }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card bg-dark text-light border-secondary h-100">
-      <div class="card-body">
-        <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Últimas Sessões</h5>
-        <ul class="list-group list-group-flush">
-          {% for session in last_sessions %}
-            <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-file-text me-2"></i>{{ session.topic.name|default:"Sem tópico" }}</span>
-              <span class="badge bg-primary rounded-pill">{{ session.duration_minutes }} min</span>
-            </li>
-          {% empty %}
-            <li class="list-group-item bg-dark text-light border-secondary text-muted">Nenhuma sessão registrada.</li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== PONTOS FRACOS ===== -->
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card bg-dark text-light border-secondary">
-      <div class="card-header bg-dark border-secondary">
-        <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Seus pontos fracos</h5>
-      </div>
-      <div class="card-body">
-        {% if today_plan.weak_topics %}
-          <div class="row g-3">
-            {% for weak in today_plan.weak_topics %}
-              <div class="col-md-4">
-                <div class="p-3 bg-dark bg-opacity-25 rounded border border-secondary">
-                  <h6 class="text-danger">{{ weak.topic.subject.name }}</h6>
-                  <p>{{ weak.topic.name }}</p>
-                  <div class="d-flex justify-content-between">
-                    <span class="badge bg-danger">Domínio: {{ weak.mastery }}%</span>
-                    <span class="badge bg-secondary">Prioridade: {{ weak.priority }}</span>
-                  </div>
-                  <a href="{% url 'questions:bank' %}?topic={{ weak.topic.id }}" class="btn btn-sm btn-outline-primary mt-2">Ver questões</a>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
         {% else %}
-          <p class="text-secondary mb-0">🎉 Nenhum ponto fraco identificado. Continue assim!</p>
+          <div class="empty-mini">
+            <i class="bi bi-emoji-smile"></i>
+            Nenhum ponto fraco identificado. Continue assim!
+          </div>
         {% endif %}
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- ===== REVISÕES PENDENTES ===== -->
-<div class="row">
-  <div class="col-12">
-    <div class="card bg-dark text-light border-secondary">
-      <div class="card-header bg-dark border-secondary">
-        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Revisões Pendentes</h5>
-      </div>
-      <div class="card-body" id="pending-reviews-list">
-        <div class="text-center text-muted">Carregando...</div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const container = document.getElementById('pending-reviews-list');
-    if (!container) return;
-    fetch('/estudo/pending-reviews/')
-      .then(r => r.json())
-      .then(data => {
-        if (data.length === 0) {
-          container.innerHTML = '<div class="alert alert-success">🎉 Nenhuma revisão pendente nos próximos 3 dias!</div>';
-          return;
-        }
-        let html = '<div class="list-group">';
-        data.forEach(item => {
-          const days = item.days_until;
-          let badgeClass = 'bg-success';
-          if (days <= 0) badgeClass = 'bg-danger';
-          else if (days === 1) badgeClass = 'bg-warning text-dark';
-          html += `
-            <div class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
-              <div>
-                <strong>${item.topic}</strong>
-                <span class="text-muted ms-2">(${item.subject})</span>
-                <span class="badge bg-secondary ms-2">${item.difficulty}</span>
-              </div>
-              <span class="badge ${badgeClass} rounded-pill">
-                ${days <= 0 ? '🔥 Hoje' : days + ' dia(s)'}
-              </span>
+(function () {
+  const container = document.getElementById('pending-reviews-list');
+  if (!container) return;
+
+  fetch('/estudo/pending-reviews/')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.length) {
+        container.innerHTML =
+          '<div class="empty-mini"><i class="bi bi-emoji-sunglasses"></i>' +
+          'Nenhuma revisão pendente nos próximos 3 dias.</div>';
+        return;
+      }
+      let html = '';
+      data.forEach(item => {
+        const days = item.days_until;
+        let color = '#6EE7B7';
+        let label = days + ' dia(s)';
+        if (days <= 0) { color = '#FCA5A5'; label = 'Hoje'; }
+        else if (days === 1) { color = '#FBBF24'; label = '1 dia'; }
+        html += `
+          <div class="task-item" style="border-left-color:${color};">
+            <div class="task-main">
+              <div class="task-title">${item.topic}</div>
+              <div class="task-meta">${item.subject}${item.difficulty ? ' · ' + item.difficulty : ''}</div>
             </div>
-          `;
-        });
-        html += '</div>';
-        container.innerHTML = html;
-      })
-      .catch(err => {
-        container.innerHTML = '<div class="alert alert-danger">Erro ao carregar revisões.</div>';
-        console.error(err);
+            <span style="color:${color}; font-weight:600; font-size:.8rem;">${label}</span>
+          </div>
+        `;
       });
-  });
+      container.innerHTML = html;
+    })
+    .catch(() => {
+      container.innerHTML =
+        '<div class="empty-mini"><i class="bi bi-exclamation-triangle"></i>' +
+        'Erro ao carregar revisões.</div>';
+    });
+})();
 </script>
 {% endblock %}

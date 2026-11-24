@@ -8,6 +8,8 @@ from datetime import timedelta
 from apps.study.models import StudySession, DailyProgress
 from apps.subjects.models import Topic
 from apps.study_config.models import PlannedSession
+from apps.flashcards.models import Flashcard
+from apps.contests.models import Contest
 from apps.learning.services import LearningEngine
 
 logger = logging.getLogger(__name__)
@@ -149,6 +151,34 @@ def index(request):
     # ===== Meta diária =====
     daily_goal_hours = float(user.daily_goal_hours) if user.daily_goal_hours else 3.0
 
+    # ===== Pendências: flashcards para revisar + questões no caderno =====
+    flashcards_pendentes = Flashcard.objects.filter(
+        user=user,
+        proxima_revisao__lte=today,
+    ).count()
+
+    # ===== Próxima prova (concurso com exam_date futura mais próxima) =====
+    proximo_concurso = (
+        Contest.objects
+        .filter(user=user, exam_date__gte=today, status__in=['planning', 'studying', 'review', 'intensive'])
+        .order_by('exam_date')
+        .first()
+    )
+    proxima_prova = None
+    if proximo_concurso:
+        dias = (proximo_concurso.exam_date - today).days
+        proxima_prova = {
+            'concurso': proximo_concurso,
+            'dias': dias,
+            'urgente': dias <= 30,
+        }
+
+    # ===== Tarefas de hoje não concluídas =====
+    pending_tasks_count = today_sessions.filter(
+        status__in=['planned', 'in_progress']
+    ).count()
+    total_tasks_count = today_sessions.count()
+
     context = {
         # métricas existentes
         'hours_today': hours_today,
@@ -167,5 +197,10 @@ def index(request):
         'today_sessions': today_sessions,
         'week_by_day': week_by_day,
         'weekly_stats': weekly_stats,
+        # novos
+        'flashcards_pendentes': flashcards_pendentes,
+        'proxima_prova': proxima_prova,
+        'pending_tasks_count': pending_tasks_count,
+        'total_tasks_count': total_tasks_count,
     }
     return render(request, 'dashboard/index.html', context)

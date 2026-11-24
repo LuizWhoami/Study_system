@@ -16,7 +16,7 @@ class Flashcard(models.Model):
     )
     intervalo = models.PositiveIntegerField(default=1, verbose_name="Intervalo (dias)")
     facilidade = models.FloatField(default=2.5, verbose_name="Facilidade")
-    proxima_revisao = models.DateField(default=date.today, verbose_name="Próxima revisão")
+    proxima_revisao = models.DateField(default=timezone.localdate, verbose_name="Próxima revisão")
     vezes_revisado = models.PositiveIntegerField(default=0, verbose_name="Vezes revisado")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")

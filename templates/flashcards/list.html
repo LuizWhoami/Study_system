@@ -106,6 +106,73 @@
     color: var(--text-muted);
   }
   .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+
+  .flashcard-card { position: relative; }
+  .fc-delete-btn {
+    position: absolute;
+    top: 0.6rem; right: 0.6rem;
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: rgba(248,250,255,0.55);
+    font-size: 0.95rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease, color .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .flashcard-card:hover .fc-delete-btn { opacity: 1; }
+  .fc-delete-btn:hover {
+    color: #FCA5A5;
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.35);
+  }
+  .fc-filters {
+    display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .fc-chip {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem .85rem;
+    font-size: .82rem; font-weight: 500;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(248,250,255,0.7);
+    text-decoration: none;
+    transition: all .15s ease;
+  }
+  .fc-chip:hover { background: rgba(255,255,255,0.06); color: #F8FAFF; }
+  .fc-chip.active {
+    background: rgba(108,99,255,0.15);
+    border-color: rgba(108,99,255,0.4);
+    color: #F8FAFF;
+  }
+  .fc-chip .count {
+    font-size: .72rem;
+    padding: 1px 6px;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(248,250,255,0.6);
+  }
+  .fc-chip.active .count {
+    background: rgba(108,99,255,0.3);
+    color: #F8FAFF;
+  }
+  .fc-filter-select {
+    padding: .45rem .85rem;
+    font-size: .82rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px;
+    color: #F8FAFF;
+    margin-left: auto;
+  }
+  .fc-filter-select:focus { outline: 0; border-color: #8B7FFF; }
+  @media (max-width: 640px) {
+    .fc-filter-select { margin-left: 0; width: 100%; }
+  }
 </style>
 {% endblock %}
 
@@ -237,4 +304,34 @@
     <i class="bi bi-bar-chart me-1"></i> Estatísticas
   </a>
 </div>
+
+{% if flashcards %}
+  {% for flashcard in flashcards %}
+    <div class="modal fade" id="fc-del-{{ flashcard.pk }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form method="post" action="{% url 'flashcards:excluir' flashcard.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="modal-header">
+              <h5 class="modal-title">Excluir flashcard?</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-2">Esta ação não pode ser desfeita.</p>
+              <div class="p-3 rounded" style="background: var(--surface); border: 1px solid var(--border);">
+                <small class="text-muted">{{ flashcard.pergunta|truncatechars:180 }}</small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-danger">Excluir</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
 {% endblock %}
