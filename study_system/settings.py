@@ -78,8 +78,21 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'dashboard:index'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
+LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 GROQ_API_KEY = config('GROQ_API_KEY', default='')
+
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://lsstudy.lstech.dev.br',
+    'https://lsstudy.lstech.dev.br',
+    'http://www.lsstudy.lstech.dev.br',
+    'https://www.lsstudy.lstech.dev.br',
+    'http://179.198.124.104',
+    'https://179.198.124.104',
+]

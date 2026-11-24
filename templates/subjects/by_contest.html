@@ -1,73 +1,523 @@
 {% extends 'base.html' %}
-{% block title %}Matérias de {{ estudo.name }}{% endblock %}
+
+{% block title %}{{ estudo.name }} — Matérias{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ----- Cabeçalho do concurso ----- */
+  .contest-header {
+    background: linear-gradient(135deg, rgba(124,140,255,0.12), rgba(167,139,250,0.08));
+    border: 1px solid rgba(124,140,255,0.2);
+    border-radius: var(--ls-radius-lg, 16px);
+    padding: 22px 26px;
+    margin-bottom: var(--ls-space-5);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: start;
+  }
+  .contest-header__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ls-text, #e8e8f0);
+    margin: 0 0 4px 0;
+    line-height: 1.2;
+  }
+  .contest-header__subtitle {
+    color: var(--ls-text-muted, #9ca3af);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .contest-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 0.85rem;
+    color: var(--ls-text-muted);
+  }
+  .contest-header__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .contest-header__meta-item i {
+    color: var(--ls-primary, #7c8cff);
+    font-size: 0.95rem;
+  }
+  .contest-header__exam {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .contest-header__exam-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ls-text-dim, rgba(255,255,255,0.45));
+    font-weight: 600;
+  }
+  .contest-header__exam-date {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ls-text, #e8e8f0);
+  }
+  .contest-header__days {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--ls-radius-pill, 999px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: var(--ls-surface);
+    color: var(--ls-text, #e8e8f0);
+  }
+  .contest-header__days--safe     { background: var(--ls-success-soft); color: var(--ls-success); }
+  .contest-header__days--warning  { background: var(--ls-warning-soft); color: var(--ls-warning); }
+  .contest-header__days--danger   { background: var(--ls-danger-soft);  color: var(--ls-danger);  }
+
+  /* ----- Progresso geral ----- */
+  .progress-section {
+    background: var(--ls-surface);
+    border: 1px solid var(--ls-border);
+    border-radius: var(--ls-radius-lg, 16px);
+    padding: 16px 22px;
+    margin-bottom: var(--ls-space-5);
+  }
+  .progress-section__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    color: var(--ls-text-muted);
+  }
+  .progress-section__percent {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ls-text);
+  }
+  .progress-section__bar {
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: var(--ls-radius-pill, 999px);
+    overflow: hidden;
+  }
+  .progress-section__fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ls-primary), var(--ls-accent));
+    border-radius: var(--ls-radius-pill, 999px);
+    transition: width 0.6s ease;
+  }
+
+  /* ----- Lista de matérias ----- */
+  .subject-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .subject-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ls-border);
+  }
+  .subject-item:last-child { border-bottom: none; }
+
+  .subject-item__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .subject-item__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .subject-item__name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ls-text);
+  }
+  .subject-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: var(--ls-text-muted);
+    flex-wrap: wrap;
+  }
+  .subject-item__meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .subject-item__progress {
+    margin-top: 6px;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: var(--ls-radius-pill, 999px);
+    overflow: hidden;
+    max-width: 280px;
+  }
+  .subject-item__progress-fill {
+    height: 100%;
+    background: var(--ls-success, #10b981);
+    border-radius: var(--ls-radius-pill, 999px);
+    transition: width 0.6s ease;
+  }
+
+  .subject-item__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+  }
+  .subject-item:hover .subject-item__actions { opacity: 1; }
+
+  .subject-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--ls-surface);
+    border: 1px solid var(--ls-border);
+    color: var(--ls-text);
+    border-radius: var(--ls-radius-sm, 8px);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .subject-btn:hover {
+    background: var(--ls-primary-soft);
+    border-color: rgba(124,140,255,0.35);
+    color: var(--ls-primary);
+  }
+  .subject-btn--primary {
+    background: var(--ls-primary);
+    border-color: var(--ls-primary);
+    color: #fff;
+  }
+  .subject-btn--primary:hover {
+    background: var(--ls-primary-hover);
+    border-color: var(--ls-primary-hover);
+    color: #fff;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--ls-border);
+    background: transparent;
+    color: var(--ls-text-muted);
+    border-radius: var(--ls-radius-sm, 8px);
+    cursor: pointer;
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .icon-btn:hover {
+    background: var(--ls-surface);
+    color: var(--ls-text);
+    border-color: var(--ls-border-strong);
+  }
+  .icon-btn--danger:hover {
+    background: var(--ls-danger-soft);
+    color: var(--ls-danger);
+    border-color: rgba(239,68,68,0.4);
+  }
+  .icon-btn--success:hover {
+    background: var(--ls-success-soft);
+    color: var(--ls-success);
+    border-color: rgba(16,185,129,0.4);
+  }
+
+  /* ----- Status badge ----- */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: var(--ls-radius-pill, 999px);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .status-badge--not_started        { background: rgba(255,255,255,0.06); color: var(--ls-text-muted); }
+  .status-badge--studying           { background: var(--ls-primary-soft); color: var(--ls-primary); }
+  .status-badge--studied            { background: rgba(245,158,11,0.15); color: var(--ls-warning); }
+  .status-badge--review_pending     { background: rgba(245,158,11,0.18); color: #fbbf24; }
+  .status-badge--needs_reinforcement{ background: var(--ls-danger-soft); color: var(--ls-danger); }
+  .status-badge--mastered           { background: var(--ls-success-soft); color: var(--ls-success); }
+
+  /* ----- Stats chips ----- */
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: var(--ls-space-5);
+  }
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--ls-surface);
+    border: 1px solid var(--ls-border);
+    border-radius: var(--ls-radius-pill, 999px);
+    font-size: 0.8rem;
+    color: var(--ls-text-muted);
+  }
+  .stat-chip strong { color: var(--ls-text); font-weight: 700; }
+  .stat-chip--mastered { color: var(--ls-success); }
+  .stat-chip--studying { color: var(--ls-primary); }
+
+  @media (max-width: 768px) {
+    .contest-header {
+      grid-template-columns: 1fr;
+    }
+    .contest-header__exam {
+      align-items: flex-start;
+      text-align: left;
+    }
+    .subject-item {
+      grid-template-columns: 1fr;
+    }
+    .subject-item__actions {
+      opacity: 1;
+      justify-content: flex-end;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-book me-2"></i>Matérias de {{ estudo.name }}</h2>
-  <a href="{% url 'subjects:create' %}?estudo={{ estudo.id }}" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-1"></i> Nova Matéria
-  </a>
-</div>
 
-<div class="row g-4">
-  {% for subject in subjects %}
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <h5 class="card-title">{{ subject.name }}</h5>
-            <span class="badge bg-{% if subject.status == 'mastered' %}success{% elif subject.status == 'studying' %}primary{% else %}secondary{% endif %}">
-              {{ subject.get_status_display }}
-            </span>
-          </div>
-          <p class="card-text">
-            <small class="text-muted">
-              <i class="bi bi-list-ul me-1"></i> {{ subject.topics.count }} assuntos
-            </small>
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-10">
+
+    {# ---------- Breadcrumb ---------- #}
+    <nav class="mb-4">
+      <a href="{% url 'contests:list' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Meus Estudos
+      </a>
+    </nav>
+
+    {# ---------- Header do concurso ---------- #}
+    <div class="contest-header">
+      <div>
+        <h1 class="contest-header__title">{{ estudo.name }}</h1>
+        {% if estudo.organization or estudo.position %}
+          <p class="contest-header__subtitle">
+            {% if estudo.organization %}{{ estudo.organization }}{% endif %}
+            {% if estudo.organization and estudo.position %} · {% endif %}
+            {% if estudo.position %}{{ estudo.position }}{% endif %}
           </p>
-          <div class="d-flex justify-content-between mt-3">
-            <a href="{% url 'subjects:topics_by_subject' subject.id %}" class="btn btn-sm btn-outline-primary">
-              <i class="bi bi-list-ul me-1"></i> Assuntos
-            </a>
-            <div class="btn-group btn-group-sm" role="group">
-              <a href="{% url 'subjects:update' subject.id %}" class="btn btn-outline-secondary" title="Editar matéria">
-                <i class="bi bi-pencil"></i>
-              </a>
-              <a href="{% url 'subjects:delete' subject.id %}" class="btn btn-outline-danger" title="Excluir matéria" onclick="return confirm('Tem certeza que deseja excluir esta matéria? Todos os assuntos relacionados também serão excluídos.');">
-                <i class="bi bi-trash"></i>
-              </a>
-            </div>
-          </div>
-          <div class="mt-2">
-            <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
-              {% csrf_token %}
-              <input type="hidden" name="status" value="studying">
-              <button type="submit" class="btn btn-sm btn-outline-warning {% if subject.status == 'studying' %}active{% endif %}" title="Marcar como Em andamento">
-                <i class="bi bi-play-circle"></i> Estudando
-              </button>
-            </form>
-            <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display: inline;">
-              {% csrf_token %}
-              <input type="hidden" name="status" value="mastered">
-              <button type="submit" class="btn btn-sm btn-outline-success {% if subject.status == 'mastered' %}active{% endif %}" title="Marcar como Concluído">
-                <i class="bi bi-check-circle"></i> Concluir
-              </button>
-            </form>
-          </div>
+        {% endif %}
+
+        <div class="contest-header__meta">
+          {% if estudo.board %}
+            <span class="contest-header__meta-item">
+              <i class="bi bi-building"></i> {{ estudo.board }}
+            </span>
+          {% endif %}
+          {% if estudo.priority > 0 %}
+            <span class="contest-header__meta-item">
+              <i class="bi bi-flag-fill"></i> Prioridade {{ estudo.priority }}
+            </span>
+          {% endif %}
+          <span class="contest-header__meta-item">
+            <i class="bi bi-circle-fill" style="color: {% if estudo.status == 'studying' %}var(--ls-primary){% elif estudo.status == 'finished' %}var(--ls-success){% else %}var(--ls-text-dim){% endif %}; font-size: 0.6rem;"></i>
+            {{ estudo.get_status_display }}
+          </span>
         </div>
       </div>
-    </div>
-  {% empty %}
-    <div class="col-12">
-      <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i> Nenhuma matéria cadastrada para este estudo.
-        <a href="{% url 'subjects:create' %}?estudo={{ estudo.id }}" class="alert-link">Adicionar matéria</a>
+
+      <div class="contest-header__exam">
+        {% if estudo.exam_date %}
+          <span class="contest-header__exam-label">Data da prova</span>
+          <span class="contest-header__exam-date">{{ estudo.exam_date|date:"d/m/Y" }}</span>
+          {% if days_until_exam is not None %}
+            <span class="contest-header__days {% if days_until_exam < 7 %}contest-header__days--danger{% elif days_until_exam < 30 %}contest-header__days--warning{% else %}contest-header__days--safe{% endif %}">
+              {% if days_until_exam < 0 %}
+                <i class="bi bi-exclamation-circle"></i> Passou
+              {% elif days_until_exam == 0 %}
+                <i class="bi bi-bell-fill"></i> É hoje!
+              {% elif days_until_exam == 1 %}
+                <i class="bi bi-hourglass-split"></i> Amanhã
+              {% else %}
+                <i class="bi bi-hourglass-split"></i> {{ days_until_exam }} dias
+              {% endif %}
+            </span>
+          {% endif %}
+        {% elif estudo.expected_date %}
+          <span class="contest-header__exam-label">Previsto</span>
+          <span class="contest-header__exam-date">{{ estudo.expected_date|date:"d/m/Y" }}</span>
+        {% else %}
+          <span class="contest-header__exam-label">Sem data</span>
+          <span class="contest-header__exam-date" style="color: var(--ls-text-dim);">—</span>
+        {% endif %}
       </div>
     </div>
-  {% endfor %}
-</div>
 
-<a href="{% url 'contests:list' %}" class="btn btn-secondary mt-3">
-  <i class="bi bi-arrow-left me-1"></i> Voltar para Meus Estudos
-</a>
+    {# ---------- Progresso geral ---------- #}
+    {% if stats.total > 0 %}
+    <div class="progress-section">
+      <div class="progress-section__row">
+        <span>Progresso geral</span>
+        <span class="progress-section__percent">{{ progress }}%</span>
+      </div>
+      <div class="progress-section__bar">
+        <div class="progress-section__fill" style="width: {{ progress }}%;"></div>
+      </div>
+      <div class="progress-section__row" style="margin-top: 10px; margin-bottom: 0;">
+        <span>{{ stats.mastered }} de {{ stats.total }} matérias dominadas</span>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ---------- Stats chips ---------- #}
+    {% if stats.total > 0 %}
+    <div class="stats-row">
+      <span class="stat-chip"><i class="bi bi-book"></i> <strong>{{ stats.total }}</strong> matérias</span>
+      {% if stats.mastered %}
+        <span class="stat-chip stat-chip--mastered"><i class="bi bi-check-circle-fill"></i> <strong>{{ stats.mastered }}</strong> dominadas</span>
+      {% endif %}
+      {% if stats.studying %}
+        <span class="stat-chip stat-chip--studying"><i class="bi bi-play-circle-fill"></i> <strong>{{ stats.studying }}</strong> estudando</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ---------- Header da lista ---------- #}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 style="margin: 0; font-size: 1.15rem;">Matérias</h2>
+      <a href="{% url 'subjects:create' %}?estudo={{ estudo.id }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Nova matéria
+      </a>
+    </div>
+
+    {# ---------- Lista de matérias ---------- #}
+    <div class="card">
+      <div class="card-body">
+        {% if subjects %}
+          <div class="subject-list">
+            {% for subject in subjects %}
+              <div class="subject-item">
+
+                <div class="subject-item__main">
+                  <div class="subject-item__title">
+                    <span class="subject-item__name">{{ subject.name }}</span>
+                    <span class="status-badge status-badge--{{ subject.status }}">
+                      {% if subject.status == 'not_started' %}<i class="bi bi-circle"></i>
+                      {% elif subject.status == 'studying' %}<i class="bi bi-play-circle-fill"></i>
+                      {% elif subject.status == 'studied' %}<i class="bi bi-book-fill"></i>
+                      {% elif subject.status == 'review_pending' %}<i class="bi bi-clock-history"></i>
+                      {% elif subject.status == 'needs_reinforcement' %}<i class="bi bi-exclamation-triangle-fill"></i>
+                      {% elif subject.status == 'mastered' %}<i class="bi bi-check-circle-fill"></i>
+                      {% endif %}
+                      {{ subject.get_status_display|cut:"⚪ "|cut:"🔵 "|cut:"🟡 "|cut:"🟠 "|cut:"🔴 "|cut:"🟢 " }}
+                    </span>
+                  </div>
+
+                  <div class="subject-item__meta">
+                    <span>
+                      <i class="bi bi-list-ul"></i>
+                      {{ subject.topic_count }} assuntos
+                    </span>
+                    {% if subject.mastered_count %}
+                      <span>
+                        <i class="bi bi-check-circle-fill" style="color: var(--ls-success);"></i>
+                        {{ subject.mastered_count }} dominados
+                      </span>
+                    {% endif %}
+                    {% if subject.reinforce_count %}
+                      <span>
+                        <i class="bi bi-exclamation-triangle-fill" style="color: var(--ls-danger);"></i>
+                        {{ subject.reinforce_count }} reforço
+                      </span>
+                    {% endif %}
+                    {% if subject.review_count %}
+                      <span>
+                        <i class="bi bi-clock-history" style="color: var(--ls-warning);"></i>
+                        {{ subject.review_count }} revisão
+                      </span>
+                    {% endif %}
+                  </div>
+
+                  {% if subject.topic_count > 0 %}
+                    {% widthratio subject.mastered_count subject.topic_count 100 as subject_pct %}
+                    <div class="subject-item__progress">
+                      <div class="subject-item__progress-fill" style="width: {{ subject_pct }}%;"></div>
+                    </div>
+                  {% endif %}
+                </div>
+
+                <div class="subject-item__actions">
+                  <a href="{% url 'subjects:topics_by_subject' subject.id %}" class="subject-btn subject-btn--primary">
+                    <i class="bi bi-list-ul"></i> Assuntos
+                  </a>
+
+                  <form method="post" action="{% url 'subjects:alterar_status_materia' subject.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    {% if subject.status == 'mastered' %}
+                      <input type="hidden" name="status" value="studying">
+                      <button type="submit" class="icon-btn" title="Retomar como estudando">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                      </button>
+                    {% else %}
+                      <input type="hidden" name="status" value="mastered">
+                      <button type="submit" class="icon-btn icon-btn--success" title="Marcar como dominada">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    {% endif %}
+                  </form>
+
+                  <a href="{% url 'subjects:update' subject.id %}" class="icon-btn" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+
+                  <a href="{% url 'subjects:delete' subject.id %}" class="icon-btn icon-btn--danger"
+                     title="Excluir"
+                     onclick="return confirm('Excluir a matéria &quot;{{ subject.name|escapejs }}&quot;? Todos os assuntos relacionados também serão excluídos.');">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </div>
+
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-5">
+            <i class="bi bi-journal-plus" style="font-size: 2.5rem; color: var(--ls-text-dim); display:block; margin-bottom: 12px;"></i>
+            <p class="text-muted mb-3">Este concurso ainda não tem matérias cadastradas.</p>
+            <a href="{% url 'subjects:create' %}?estudo={{ estudo.id }}" class="btn btn-primary">
+              <i class="bi bi-plus-lg"></i> Adicionar primeira matéria
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ---------- Rodapé ---------- #}
+    <div class="mt-4">
+      <a href="{% url 'contests:list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar para Meus Estudos
+      </a>
+    </div>
+
+  </div>
+</div>
 {% endblock %}

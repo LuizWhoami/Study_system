@@ -1,4 +1,4 @@
-# Study System - Plataforma de Estudos para Concursos
+# Study System - Plataforma de Estudos
 
 Sistema completo para organização de estudos, com foco em produtividade, revisões e acompanhamento de desempenho.
 
@@ -17,5 +17,4 @@ Sistema completo para organização de estudos, com foco em produtividade, revis
 7. Inicie o servidor: `python manage.py runserver`
  
 #### tem algumas dependecias
-### Sistema de Estudos
-##
+ 

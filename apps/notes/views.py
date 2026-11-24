@@ -4,12 +4,12 @@ import random
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.db.models import Count
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from .models import Note, Tag
-from .forms import NoteForm
+from .models import Note, Tag, NoteFolder
+from .forms import NoteForm, NoteFolderForm
 from apps.subjects.models import Topic
 from apps.core.services import GroqService
 from apps.flashcards.models import Flashcard
@@ -33,7 +33,16 @@ class NoteCreateView(LoginRequiredMixin, CreateView):
     model = Note
     form_class = NoteForm
     template_name = 'notes/form.html'
-    success_url = reverse_lazy('notes:list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        folder_id = self.request.GET.get('folder')
+        if folder_id:
+            try:
+                initial['folder'] = NoteFolder.objects.get(pk=folder_id, user=self.request.user)
+            except NoteFolder.DoesNotExist:
+                pass
+        return initial
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -44,11 +53,15 @@ class NoteCreateView(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         return super().form_valid(form)
 
+    def get_success_url(self):
+        if self.object.folder_id:
+            return reverse_lazy('notes:folder_detail', kwargs={'pk': self.object.folder_id})
+        return reverse_lazy('notes:folder_list')
+
 class NoteUpdateView(LoginRequiredMixin, UpdateView):
     model = Note
     form_class = NoteForm
     template_name = 'notes/form.html'
-    success_url = reverse_lazy('notes:list')
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -58,13 +71,46 @@ class NoteUpdateView(LoginRequiredMixin, UpdateView):
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
 
+    def get_success_url(self):
+        if self.object.folder_id:
+            return reverse_lazy('notes:folder_detail', kwargs={'pk': self.object.folder_id})
+        return reverse_lazy('notes:folder_list')
+
 class NoteDeleteView(LoginRequiredMixin, DeleteView):
     model = Note
     template_name = 'notes/confirm_delete.html'
-    success_url = reverse_lazy('notes:list')
 
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Preserva ?next= para o POST (validação de segurança na view)
+        ctx['next_url'] = self.request.GET.get('next', '')
+        return ctx
+
+    def get_success_url(self):
+        from django.utils.http import url_has_allowed_host_and_scheme
+
+        # 1) ?next= explícito (com validação de segurança)
+        next_url = (
+            self.request.POST.get('next')
+            or self.request.GET.get('next')
+            or ''
+        )
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
+            return next_url
+
+        # 2) Nota tinha pasta → volta para a pasta
+        if self.object.folder_id:
+            return reverse_lazy('notes:folder_detail', kwargs={'pk': self.object.folder_id})
+
+        # 3) Sem pasta → grid de pastas
+        return reverse_lazy('notes:folder_list')
 
 class NoteDetailView(LoginRequiredMixin, DetailView):
     model = Note
@@ -73,6 +119,99 @@ class NoteDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
+
+# ============================
+# PASTAS DE NOTAS (NoteFolder)
+# ============================
+
+class NoteFolderListView(LoginRequiredMixin, ListView):
+    """Grid de pastas em /notas/."""
+    model = NoteFolder
+    template_name = 'notes/folder_list.html'
+    context_object_name = 'folders'
+
+    def get_queryset(self):
+        return (
+            NoteFolder.objects
+            .filter(user=self.request.user)
+            .annotate(note_count=Count('notes'))
+            .order_by('name')
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['folderless_count'] = Note.objects.filter(
+            user=self.request.user, folder__isnull=True
+        ).count()
+        ctx['total_notes'] = Note.objects.filter(user=self.request.user).count()
+        return ctx
+
+
+class NoteFolderDetailView(LoginRequiredMixin, DetailView):
+    """Notas dentro de uma pasta em /notas/pasta/<pk>/."""
+    model = NoteFolder
+    template_name = 'notes/folder_detail.html'
+    context_object_name = 'folder'
+
+    def get_queryset(self):
+        return NoteFolder.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['notes'] = (
+            self.object.notes
+            .filter(user=self.request.user)
+            .order_by('-updated_at')
+        )
+        return ctx
+
+
+class NoteFolderlessView(LoginRequiredMixin, ListView):
+    """Notas sem pasta em /notas/sem-pasta/."""
+    model = Note
+    template_name = 'notes/folder_detail.html'
+    context_object_name = 'notes'
+
+    def get_queryset(self):
+        return Note.objects.filter(
+            user=self.request.user, folder__isnull=True
+        ).order_by('-updated_at')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['folder'] = None
+        return ctx
+
+
+class NoteFolderCreateView(LoginRequiredMixin, CreateView):
+    model = NoteFolder
+    form_class = NoteFolderForm
+    template_name = 'notes/folder_form.html'
+    success_url = reverse_lazy('notes:folder_list')
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
+
+
+class NoteFolderUpdateView(LoginRequiredMixin, UpdateView):
+    model = NoteFolder
+    form_class = NoteFolderForm
+    template_name = 'notes/folder_form.html'
+    success_url = reverse_lazy('notes:folder_list')
+
+    def get_queryset(self):
+        return NoteFolder.objects.filter(user=self.request.user)
+
+
+class NoteFolderDeleteView(LoginRequiredMixin, DeleteView):
+    model = NoteFolder
+    template_name = 'notes/folder_confirm_delete.html'
+    success_url = reverse_lazy('notes:folder_list')
+
+    def get_queryset(self):
+        return NoteFolder.objects.filter(user=self.request.user)
+
 
 # ============================
 # FLASHCARDS COM IA
@@ -88,7 +227,6 @@ def gerar_flashcards_nota(request, note_id):
     return JsonResponse({'flashcards': flashcards, 'note_id': note.id})
 
 @login_required
-@csrf_exempt
 def salvar_flashcards_nota(request, note_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -152,7 +290,6 @@ def gerar_questoes_nota(request, note_id):
     return JsonResponse({'questoes': questoes, 'note_id': note.id})
 
 @login_required
-@csrf_exempt
 def salvar_questoes_nota(request, note_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -183,35 +320,3 @@ def salvar_questoes_nota(request, note_id):
     except Exception as e:
         logger.error(f'Erro ao salvar questões: {e}')
         return JsonResponse({'error': str(e)}, status=500)
-
-# ============================
-# AUTOSAVE (AJAX)
-# ============================
-
-@login_required
-@csrf_exempt
-def autosave_note(request, pk=None):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método não permitido'}, status=405)
-
-    content = request.POST.get('content', '').strip()
-    title = request.POST.get('title', '').strip()
-
-    if not title:
-        return JsonResponse({'error': 'Título é obrigatório'}, status=400)
-
-    if pk:
-        note = get_object_or_404(Note, pk=pk, user=request.user)
-        note.content = content
-        note.title = title
-        note.save()
-        return JsonResponse({'success': True, 'id': note.id})
-    else:
-        topic = Topic.objects.filter(subject__contest__user=request.user).first()
-        note = Note.objects.create(
-            user=request.user,
-            topic=topic,
-            title=title,
-            content=content
-        )
-        return JsonResponse({'success': True, 'id': note.id})

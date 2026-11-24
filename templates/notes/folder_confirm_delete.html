@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6">
+    <div class="card">
+      <div class="card-header">Confirmar exclusão</div>
+      <div class="card-body">
+        <p>Tem certeza que deseja excluir a pasta <strong>{{ object.name }}</strong>?</p>
+        <p class="text-muted small">
+          As notas dentro dela <strong>não serão apagadas</strong> — elas vão para "Sem pasta".
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Sim, excluir</button>
+          <a href="{% url 'notes:folder_list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -6,12 +6,13 @@ from apps.subjects.models import Topic
 from apps.notes.models import Note
 from datetime import date
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 @login_required
 def listar_flashcards(request):
-    hoje = date.today()
+    hoje = timezone.localdate()
     flashcards = Flashcard.objects.filter(
         user=request.user,
         proxima_revisao__lte=hoje
@@ -75,11 +76,11 @@ def estatisticas_flashcards(request):
     total = Flashcard.objects.filter(user=request.user).count()
     revisados_hoje = Flashcard.objects.filter(
         user=request.user,
-        updated_at__date=date.today()
+        updated_at__date=timezone.localdate()
     ).count()
     pendentes = Flashcard.objects.filter(
         user=request.user,
-        proxima_revisao__lte=date.today()
+        proxima_revisao__lte=timezone.localdate()
     ).count()
     por_materia = {}
     for flashcard in Flashcard.objects.filter(user=request.user):

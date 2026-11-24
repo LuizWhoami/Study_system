@@ -5,18 +5,21 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="text-light"><i class="bi bi-database me-2"></i>Banco de Questões</h2>
-  <div>
-    <a href="{% url 'questions:error_log' %}" class="btn btn-danger me-2">
-      <i class="bi bi-journal-x me-1"></i> Caderno de Erros
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'questions:import' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-upload me-1"></i>Importar
     </a>
-    <a href="{% url 'questions:treino_inteligente' %}" class="btn btn-warning me-2">
-      <i class="bi bi-robot me-1"></i> Treino Inteligente
-    </a>
-    <a href="{% url 'questions:create' %}" class="btn btn-primary me-2">
+    <a href="{% url 'questions:create' %}" class="btn btn-primary">
       <i class="bi bi-plus-circle me-1"></i> Nova Questão
     </a>
-    <a href="{% url 'questions:import' %}" class="btn btn-secondary">
-      <i class="bi bi-upload me-1"></i> Importar
+    <a href="{% url 'questions:ia_gerar' %}" class="btn btn-outline-info">
+      <i class="bi bi-magic me-1"></i> Gerar com IA
+    </a>
+    <a href="{% url 'questions:error_log' %}" class="btn btn-outline-danger">
+      <i class="bi bi-journal-x me-1"></i> Caderno de Erros
+    </a>
+    <a href="{% url 'questions:performance' %}" class="btn btn-outline-success">
+      <i class="bi bi-graph-up-arrow me-1"></i> Performance
     </a>
   </div>
 </div>
@@ -25,7 +28,7 @@
 <div class="card bg-dark text-light border-secondary mb-4">
   <div class="card-body">
     <form method="get" class="row g-3">
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label text-light">Matéria</label>
         <select name="subject" class="form-select bg-dark text-light border-secondary">
           <option value="">Todas</option>
@@ -34,12 +37,22 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label text-light">Tópico</label>
         <select name="topic" class="form-select bg-dark text-light border-secondary">
           <option value="">Todos</option>
           {% for topic in topics %}
             <option value="{{ topic.id }}" {% if request.GET.topic == topic.id|stringformat:'s' %}selected{% endif %}>{{ topic.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-light">Banca</label>
+        <select name="banca" class="form-select bg-dark text-light border-secondary">
+          <option value="">Todas</option>
+          {% for banca in bancas %}
+            <option value="{{ banca }}" {% if request.GET.banca == banca %}selected{% endif %}>{{ banca }}</option>
           {% endfor %}
         </select>
       </div>

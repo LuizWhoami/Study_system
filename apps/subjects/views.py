@@ -3,9 +3,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
+from django.db.models import Count, Q
+from django.utils import timezone
 from .models import Subject, Topic
 from .forms import SubjectForm, TopicForm
 from apps.contests.models import Contest
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 # ============================
 # VIEWS PARA MATÉRIAS (SUBJECT)
@@ -25,12 +29,37 @@ class SubjectByContestView(LoginRequiredMixin, ListView):
     context_object_name = 'subjects'
 
     def get_queryset(self):
-        self.estudo = get_object_or_404(Contest, id=self.kwargs['estudo_id'], user=self.request.user)
-        return Subject.objects.filter(contest=self.estudo)
+        self.estudo = get_object_or_404(
+            Contest, id=self.kwargs['estudo_id'], user=self.request.user
+        )
+        return (
+            Subject.objects
+            .filter(contest=self.estudo)
+            .annotate(
+                topic_count=Count('topics', distinct=True),
+                mastered_count=Count('topics', filter=Q(topics__status='mastered'), distinct=True),
+                studying_count=Count('topics', filter=Q(topics__status='studying'), distinct=True),
+                review_count=Count('topics', filter=Q(topics__status='review_pending'), distinct=True),
+                reinforce_count=Count('topics', filter=Q(topics__status='needs_reinforcement'), distinct=True),
+            )
+            .order_by('order', 'name')
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['estudo'] = self.estudo
+        context['progress'] = self.estudo.get_progress()
+
+        exam = self.estudo.exam_date
+        if exam:
+            context['days_until_exam'] = (exam - timezone.localdate()).days
+
+        all_subs = list(self.object_list)
+        context['stats'] = {
+            'total': len(all_subs),
+            'mastered': sum(1 for s in all_subs if s.status == 'mastered'),
+            'studying': sum(1 for s in all_subs if s.status == 'studying'),
+        }
         return context
 
 class SubjectCreateView(LoginRequiredMixin, CreateView):
@@ -49,6 +78,13 @@ class SubjectCreateView(LoginRequiredMixin, CreateView):
         if estudo_id:
             initial['contest'] = estudo_id
         return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        estudo_id = self.request.GET.get('estudo')
+        if estudo_id:
+            context['estudo'] = get_object_or_404(Contest, id=estudo_id, user=self.request.user)
+        return context
 
     def form_valid(self, form):
         self.success_url = reverse('subjects:by_contest', kwargs={'estudo_id': form.instance.contest.id})
@@ -95,12 +131,30 @@ class TopicBySubjectView(LoginRequiredMixin, ListView):
     context_object_name = 'topics'
 
     def get_queryset(self):
-        self.materia = get_object_or_404(Subject, id=self.kwargs['subject_id'], contest__user=self.request.user)
-        return Topic.objects.filter(subject=self.materia)
+        self.materia = get_object_or_404(
+            Subject, id=self.kwargs['subject_id'], contest__user=self.request.user
+        )
+        return (
+            Topic.objects
+            .filter(subject=self.materia)
+            .select_related('parent')
+            .prefetch_related('tags')
+            .order_by('parent__id', 'order', 'name')
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['subject'] = self.materia
+
+        qs = self.object_list
+        context['stats'] = {
+            'total': qs.count(),
+            'mastered': qs.filter(status='mastered').count(),
+            'studying': qs.filter(status='studying').count(),
+            'review': qs.filter(status='review_pending').count(),
+            'reinforce': qs.filter(status='needs_reinforcement').count(),
+            'not_started': qs.filter(status='not_started').count(),
+        }
         return context
 
 class TopicCreateView(LoginRequiredMixin, CreateView):
@@ -170,6 +224,8 @@ class TopicDeleteView(LoginRequiredMixin, DeleteView):
 # AÇÕES DE ALTERAÇÃO DE STATUS
 # ============================
 
+@login_required
+@require_POST
 def alterar_status_materia(request, pk):
     subject = get_object_or_404(Subject, pk=pk, contest__user=request.user)
     novo_status = request.POST.get('status')
@@ -188,6 +244,8 @@ def alterar_status_materia(request, pk):
     messages.success(request, f'Matéria "{subject.name}" alterada para {subject.get_status_display()}.')
     return redirect('subjects:by_contest', estudo_id=subject.contest.id)
 
+@login_required
+@require_POST
 def alterar_status_topico(request, pk):
     topic = get_object_or_404(Topic, pk=pk, subject__contest__user=request.user)
     novo_status = request.POST.get('status')

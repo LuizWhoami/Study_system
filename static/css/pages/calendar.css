@@ -1,0 +1,162 @@
+/* ============================================================
+   LSStudy — Calendário (compacto)
+   ============================================================ */
+
+/* ===== Container do grid: limita largura, centraliza ===== */
+.calendar-wrap {
+  max-width: 420px;
+  margin: 0 auto 1.25rem;
+}
+
+/* ===== Grid de 7 colunas iguais ===== */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
+}
+
+@media (max-width: 640px) {
+  .calendar-grid { gap: 0.25rem; }
+}
+
+/* ===== Card de dia: quadrado, compacto ===== */
+.calendar-day {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0.5rem !important;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  user-select: none;
+  overflow: hidden;
+}
+
+.calendar-day .card-body {
+  padding: 0.15rem 0.05rem !important;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+}
+
+.calendar-day:hover {
+  transform: scale(1.04);
+  border-color: rgba(108, 99, 255, 0.55) !important;
+  background: rgba(108, 99, 255, 0.06);
+}
+
+.calendar-day:focus-visible {
+  outline: 2px solid var(--primary, #6C63FF);
+  outline-offset: 2px;
+}
+
+/* ===== Tipografia interna ===== */
+.calendar-day__weekday {
+  font-size: 0.48rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.calendar-day__number {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary, #fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day__icon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+/* ===== Estados ===== */
+.calendar-day--today {
+  border-color: var(--primary, #6C63FF) !important;
+  box-shadow: 0 0 0 1.5px var(--primary, #6C63FF) inset;
+}
+.calendar-day--today .calendar-day__number {
+  color: var(--primary-light, #8B83FF);
+}
+
+.calendar-day--past { opacity: 0.5; }
+.calendar-day--past:hover { opacity: 1; }
+
+.calendar-day--study     { border-color: rgba(108, 99, 255, 0.6) !important; }
+.calendar-day--review    { border-color: rgba(245, 158, 11, 0.6) !important; }
+.calendar-day--questions { border-color: rgba(0, 210, 255, 0.6) !important; }
+.calendar-day--summary   { border-color: rgba(139, 92, 246, 0.6) !important; }
+.calendar-day--rest      { border-color: rgba(107, 114, 128, 0.6) !important; }
+
+/* ===== Legenda ===== */
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+/* ===== Barra da meta ===== */
+.goal-bar {
+  height: 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.goal-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6C63FF, #00D2FF);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+/* ===== Botões de atividade no modal ===== */
+.activity-btn {
+  border: 1.5px solid var(--border, #252538);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary, #D0D4E8);
+  user-select: none;
+}
+.activity-btn:hover {
+  background: rgba(108, 99, 255, 0.08);
+  border-color: rgba(108, 99, 255, 0.4);
+}
+.activity-btn.selected {
+  border-color: var(--primary, #6C63FF);
+  background: rgba(108, 99, 255, 0.15);
+  color: var(--text-primary, #fff);
+}
+.activity-btn .icon {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 0.15rem;
+}
+
+/* ===== Mobile: dias ainda menores ===== */
+@media (max-width: 480px) {
+  .calendar-day__number { font-size: 0.9rem; }
+  .calendar-day__icon { font-size: 0.75rem; }
+  .calendar-day__weekday { font-size: 0.5rem; }
+}
+
+/* ===== Container das estatísticas =====
+   Largura própria, mais generosa que o calendário. */
+.stats-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (max-width: 992px) {
+  .stats-wrap { max-width: 100%; }
+}

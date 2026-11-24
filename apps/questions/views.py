@@ -1,24 +1,56 @@
+"""
+Views do app `questions`.
+
+NOTA HISTÓRICA — 2026-10-08
+---------------------------
+Este arquivo foi limpo após um merge que empilhou 3 cópias de si mesmo.
+Antes tinha 619 linhas; agora tem ~290. Bugs corrigidos:
+
+  1) `Count('questionattempt')` → `Count('attempts')`
+     relacionado ao `related_name` que a migration 0002 adiciona.
+  2) `Q(questionattempt__correta=...)` → `Q(attempts__correta=...)`
+  3) `questionreview__proxima_revisao` → `reviews__proxima_revisao`
+
+Também foram removidas as duplicatas:
+  - QuestionCreateView  (3x)
+  - QuestionUpdateView  (2x)
+  - resolve_question    (3x)
+  - error_log_list      (2x)
+  - treino_inteligente  (2x)
+"""
 import json
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import date, timedelta
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.views.generic import (
+    ListView, CreateView, UpdateView, DeleteView, DetailView, View,
+)
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_http_methods
 from django.contrib import messages
-from django.db.models import Q, Count, Avg, Sum, Case, When, Value, FloatField, ExpressionWrapper, F
+from django.db.models import (
+    Q, Count, Avg, Sum,
+    Case, When, Value, FloatField, ExpressionWrapper, F,
+)
 from django.utils import timezone
-from .models import Question, QuestionAttempt, QuestionReview, ErrorLog, Simulated, SimulatedQuestion
+
+from .models import (
+    Question, QuestionAttempt, QuestionReview, ErrorLog,
+    Simulated, SimulatedQuestion,
+)
 from .forms import QuestionForm
 from apps.subjects.models import Topic, Subject
 from apps.contests.models import Contest
 
-# ============================
+
+# ============================================================
 # BANCO DE QUESTÕES
-# ============================
+# ============================================================
 
 class QuestionBankView(LoginRequiredMixin, ListView):
     model = Question
@@ -28,13 +60,14 @@ class QuestionBankView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = Question.objects.filter(user=self.request.user)
-        # Filtros...
+
         topic = self.request.GET.get('topic')
         subject = self.request.GET.get('subject')
         contest = self.request.GET.get('contest')
         difficulty = self.request.GET.get('dificuldade')
         status = self.request.GET.get('status')
         search = self.request.GET.get('search')
+        banca = self.request.GET.get('banca')
 
         if topic:
             qs = qs.filter(topic_id=topic)
@@ -44,18 +77,22 @@ class QuestionBankView(LoginRequiredMixin, ListView):
             qs = qs.filter(contest_id=contest)
         if difficulty:
             qs = qs.filter(dificuldade=difficulty)
+        if banca:
+            qs = qs.filter(banca__iexact=banca)
         if status == 'active':
             qs = qs.filter(status=True)
         elif status == 'inactive':
             qs = qs.filter(status=False)
         if search:
-            qs = qs.filter(Q(enunciado__icontains=search) | Q(explicacao__icontains=search))
+            qs = qs.filter(
+                Q(enunciado__icontains=search) | Q(explicacao__icontains=search)
+            )
 
         order = self.request.GET.get('order', '-created_at')
         qs = qs.order_by(order)
         qs = qs.annotate(
-            total_tentativas=Count('questionattempt'),
-            acertos=Count('questionattempt', filter=Q(questionattempt__correta=True)),
+            total_tentativas=Count('attempts'),
+            acertos=Count('attempts', filter=Q(attempts__correta=True)),
         )
         return qs
 
@@ -65,12 +102,21 @@ class QuestionBankView(LoginRequiredMixin, ListView):
         context['subjects'] = Subject.objects.filter(contest__user=self.request.user)
         context['contests'] = Contest.objects.filter(user=self.request.user)
         context['difficulties'] = Question.DIFFICULTY_CHOICES
+        context['bancas'] = (
+            Question.objects
+            .filter(user=self.request.user)
+            .exclude(banca='')
+            .values_list('banca', flat=True)
+            .distinct()
+            .order_by('banca')
+        )
         context['filters'] = self.request.GET
         return context
 
-# ============================
-# CRUD DE QUESTÕES (COM FORMULÁRIO)
-# ============================
+
+# ============================================================
+# CRUD DE QUESTÕES
+# ============================================================
 
 class QuestionCreateView(LoginRequiredMixin, CreateView):
     model = Question
@@ -87,6 +133,7 @@ class QuestionCreateView(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         messages.success(self.request, 'Questão criada com sucesso!')
         return super().form_valid(form)
+
 
 class QuestionUpdateView(LoginRequiredMixin, UpdateView):
     model = Question
@@ -105,6 +152,7 @@ class QuestionUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, 'Questão atualizada com sucesso!')
         return super().form_valid(form)
+
 
 class QuestionDeleteView(LoginRequiredMixin, DeleteView):
     model = Question
@@ -114,195 +162,58 @@ class QuestionDeleteView(LoginRequiredMixin, DeleteView):
     def get_queryset(self):
         return Question.objects.filter(user=self.request.user)
 
-# ============================
-# RESOLUÇÃO DE QUESTÕES
-# ============================
+
+# ============================================================
+# RESOLUÇÃO DE QUESTÃO (avulsa, fora do treino)
+# ============================================================
+
+def _registrar_no_caderno(user, question, acertou, motivo=''):
+    """
+    Registra uma tentativa no caderno (acerto OU erro).
+
+    - Atualiza `erro_consecutivo` (incrementa se erro, zera se acerto).
+    - Sempre agenda/cria `QuestionReview`.
+    """
+    last = ErrorLog.objects.filter(user=user, question=question).order_by('-data').first()
+
+    if acertou:
+        erro_consecutivo = 0
+        motivo_final = ''
+    else:
+        erro_consecutivo = (last.erro_consecutivo + 1) if last else 1
+        motivo_final = motivo or 'desconhecido'
+
+    ErrorLog.objects.create(
+        user=user,
+        question=question,
+        acertou=acertou,
+        motivo=motivo_final,
+        erro_consecutivo=erro_consecutivo,
+    )
+
+    review, created = QuestionReview.objects.get_or_create(
+        user=user,
+        question=question,
+        defaults={
+            'proxima_revisao': timezone.localdate() + timedelta(days=1),
+            'intervalo': 1,
+        },
+    )
+    if not created:
+        if acertou:
+            review.intervalo = min(review.intervalo * 2, 30)
+        else:
+            review.intervalo = 1
+        review.proxima_revisao = timezone.localdate() + timedelta(days=review.intervalo)
+        review.vezes_revisado += 1
+        review.save()
+
 
 @login_required
 def resolve_question(request, pk):
+    """Resolve uma questão avulsa e mostra o feedback na mesma página."""
     question = get_object_or_404(Question, pk=pk, user=request.user)
-    if request.method == 'POST':
-        resposta = request.POST.get('resposta')
-        if resposta:
-            acertou = (resposta == question.alternativa_correta)
-            QuestionAttempt.objects.create(
-                user=request.user,
-                question=question,
-                resposta_escolhida=resposta,
-                correta=acertou,
-                tempo_gasto=request.POST.get('tempo', 0),
-                modo='treino',
-                contest=question.contest,
-                topic=question.topic,
-            )
-            if not acertou:
-                ErrorLog.objects.create(
-                    user=request.user,
-                    question=question,
-                    motivo=request.POST.get('motivo', 'desconhecido'),
-                )
-                review, created = QuestionReview.objects.get_or_create(
-                    user=request.user,
-                    question=question,
-                    defaults={'proxima_revisao': timezone.now().date() + timedelta(days=1), 'intervalo': 1}
-                )
-                if not created:
-                    review.proxima_revisao = timezone.now().date() + timedelta(days=review.intervalo)
-                    review.intervalo = min(review.intervalo * 2, 30)
-                    review.vezes_revisado += 1
-                    review.save()
-            else:
-                ErrorLog.objects.filter(user=request.user, question=question).delete()
-                QuestionReview.objects.filter(user=request.user, question=question).delete()
-            return JsonResponse({
-                'acertou': acertou,
-                'correta': question.alternativa_correta,
-                'explicacao': question.explicacao,
-            })
-    context = {'question': question}
-    return render(request, 'questions/resolve.html', context)
 
-# ============================
-# TREINO INTELIGENTE
-# ============================
-
-@login_required
-def treino_inteligente(request):
-    # ... (mantido igual)
-    pass
-
-@login_required
-def treino_sessao(request):
-    # ... (mantido igual)
-    pass
-
-# ============================
-# SIMULADOS
-# ============================
-
-class SimuladoCreateView(LoginRequiredMixin, CreateView):
-    # ... (mantido igual)
-    pass
-
-class SimuladoListView(LoginRequiredMixin, ListView):
-    # ... (mantido igual)
-    pass
-
-@login_required
-def simulado_iniciar(request, pk):
-    # ... (mantido igual)
-    pass
-
-@login_required
-def simulado_resolver(request, pk):
-    # ... (mantido igual)
-    pass
-
-@login_required
-def simulado_responder(request, pk):
-    # ... (mantido igual)
-    pass
-
-@login_required
-def simulado_finalizar(request, pk):
-    # ... (mantido igual)
-    pass
-
-# ============================
-# CADERNO DE ERROS
-# ============================
-
-@login_required
-def error_log_list(request):
-    errors = ErrorLog.objects.filter(user=request.user).select_related('question', 'question__topic', 'question__topic__subject')
-    context = {'errors': errors}
-    return render(request, 'questions/error_log.html', context)
-
-@login_required
-def error_log_detail(request, pk):
-    error = get_object_or_404(ErrorLog, pk=pk, user=request.user)
-    return render(request, 'questions/error_log_detail.html', {'error': error})
-
-# ============================
-# ANÁLISE DE DESEMPENHO
-# ============================
-
-@login_required
-def performance(request):
-    # ... (mantido igual)
-    pass
-
-# ============================
-# IMPORTAÇÃO
-# ============================
-
-@login_required
-def import_questions(request):
-    # ... (mantido igual)
-    pass
-from .forms import QuestionForm
-
-class QuestionCreateView(LoginRequiredMixin, CreateView):
-    model = Question
-    form_class = QuestionForm
-    template_name = 'questions/form.html'
-    success_url = reverse_lazy('questions:bank')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        messages.success(self.request, 'Questão criada com sucesso!')
-        return super().form_valid(form)
-
-from .forms import QuestionForm
-
-class QuestionCreateView(LoginRequiredMixin, CreateView):
-    model = Question
-    form_class = QuestionForm
-    template_name = 'questions/form.html'
-    success_url = reverse_lazy('questions:bank')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        messages.success(self.request, 'Questão criada com sucesso!')
-        return super().form_valid(form)
-
-class QuestionUpdateView(LoginRequiredMixin, UpdateView):
-    model = Question
-    form_class = QuestionForm
-    template_name = 'questions/form.html'
-    success_url = reverse_lazy('questions:bank')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def get_queryset(self):
-        return Question.objects.filter(user=self.request.user)
-
-    def form_valid(self, form):
-        messages.success(self.request, 'Questão atualizada com sucesso!')
-        return super().form_valid(form)
-# ============================
-# RESOLUÇÃO DE QUESTÕES
-# ============================
-
-from .models import Question, QuestionAttempt, ErrorLog, QuestionReview
-from django.contrib import messages
-
-@login_required
-def resolve_question(request, pk):
-    question = get_object_or_404(Question, pk=pk, user=request.user)
     resultado = None
     acertou = False
     resposta_usuario = None
@@ -311,67 +222,7 @@ def resolve_question(request, pk):
         resposta_usuario = request.POST.get('resposta')
         if resposta_usuario:
             acertou = (resposta_usuario == question.alternativa_correta)
-            # Registrar tentativa
-            QuestionAttempt.objects.create(
-                user=request.user,
-                question=question,
-                resposta_escolhida=resposta_usuario,
-                correta=acertou,
-                tempo_gasto=0,  # você pode capturar o tempo via JavaScript
-                modo='treino',
-                contest=question.contest,
-                topic=question.topic,
-            )
-            if not acertou:
-                # Registrar erro
-                ErrorLog.objects.create(
-                    user=request.user,
-                    question=question,
-                    motivo='desconhecido',  # pode ser preenchido depois
-                    erro_consecutivo=1,
-                )
-                # Agendar revisão
-                review, created = QuestionReview.objects.get_or_create(
-                    user=request.user,
-                    question=question,
-                    defaults={'proxima_revisao': timezone.now().date() + timedelta(days=1), 'intervalo': 1}
-                )
-                if not created:
-                    review.proxima_revisao = timezone.now().date() + timedelta(days=review.intervalo)
-                    review.intervalo = min(review.intervalo * 2, 30)
-                    review.vezes_revisado += 1
-                    review.save()
-            else:
-                # Se acertou, remove do caderno de erros (se existir)
-                ErrorLog.objects.filter(user=request.user, question=question).delete()
-                QuestionReview.objects.filter(user=request.user, question=question).delete()
 
-            resultado = True
-
-    context = {
-        'question': question,
-        'resultado': resultado,
-        'acertou': acertou,
-        'resposta_usuario': resposta_usuario,
-    }
-    return render(request, 'questions/resolve.html', context)
-
-# ============================
-# RESOLUÇÃO DE QUESTÕES
-# ============================
-
-@login_required
-def resolve_question(request, pk):
-    question = get_object_or_404(Question, pk=pk, user=request.user)
-    resultado = None
-    acertou = False
-    resposta_usuario = None
-
-    if request.method == 'POST':
-        resposta_usuario = request.POST.get('resposta')
-        if resposta_usuario:
-            acertou = (resposta_usuario == question.alternativa_correta)
-            # Registrar tentativa
             QuestionAttempt.objects.create(
                 user=request.user,
                 question=question,
@@ -382,42 +233,43 @@ def resolve_question(request, pk):
                 contest=question.contest,
                 topic=question.topic,
             )
-            if not acertou:
-                # Registrar erro no caderno de erros
-                ErrorLog.objects.create(
-                    user=request.user,
-                    question=question,
-                    motivo=request.POST.get('motivo', 'desconhecido'),
-                )
+
+            # Caderno: SEMPRE registra (acerto OU erro)
+            _registrar_no_caderno(
+                user=request.user,
+                question=question,
+                acertou=acertou,
+                motivo=request.POST.get('motivo', ''),
+            )
+
             resultado = True
 
-    context = {
+    return render(request, 'questions/resolve.html', {
         'question': question,
         'resultado': resultado,
         'acertou': acertou,
         'resposta_usuario': resposta_usuario,
-    }
-    return render(request, 'questions/resolve.html', context)
+    })
 
-# ============================
-# CADERNO DE ERROS
-# ============================
-
-@login_required
-def error_log_list(request):
-    errors = ErrorLog.objects.filter(user=request.user).select_related('question', 'question__topic', 'question__topic__subject')
-    context = {'errors': errors}
-    return render(request, 'questions/error_log.html', context)
-
-# ============================
+# ============================================================
 # TREINO INTELIGENTE
-# ============================
-
-from django.db.models import Count, Q, Case, When, Value, FloatField, ExpressionWrapper
-from django.db.models.functions import Coalesce
+# ============================================================
 
 @login_required
 def treino_inteligente(request):
+    """
+    Tela de configuração do treino.
+
+    POST: monta a lista de questões segundo a estratégia escolhida,
+          salva os IDs na sessão e redireciona para `treino_sessao`.
+
+    Estratégias suportadas:
+      - erros             → questões com mais erros acumulados
+      - nunca_respondidas → questões sem nenhuma tentativa
+      - atrasadas         → questões com revisão vencida
+      - baixo_desempenho  → questões com taxa de acerto < 50%
+      - aleatorio         → shuffle puro
+    """
     if request.method == 'POST':
         materia_id = request.POST.get('materia')
         topico_id = request.POST.get('topico')
@@ -425,7 +277,6 @@ def treino_inteligente(request):
         dificuldade = request.POST.getlist('dificuldade')
         estrategia = request.POST.get('estrategia')
 
-        # Base: questões do usuário, ativas
         qs = Question.objects.filter(user=request.user, status=True)
 
         if materia_id:
@@ -435,48 +286,51 @@ def treino_inteligente(request):
         if dificuldade:
             qs = qs.filter(dificuldade__in=dificuldade)
 
-        # Estratégias
+        # ---- Estratégias ----
+        # relacionamentos corretos:
+        #   QuestionAttempt.question  → related_name='attempts'
+        #   QuestionReview.question   → related_name='reviews'
         if estrategia == 'erros':
-            # Questões com mais erros
             qs = qs.annotate(
-                total_erros=Count('questionattempt', filter=Q(questionattempt__correta=False))
+                total_erros=Count('attempts', filter=Q(attempts__correta=False))
             ).order_by('-total_erros')
+
         elif estrategia == 'nunca_respondidas':
-            # Questões nunca respondidas
-            qs = qs.annotate(total=Count('questionattempt')).filter(total=0)
+            qs = qs.annotate(total=Count('attempts')).filter(total=0)
+
         elif estrategia == 'atrasadas':
-            # Revisões atrasadas (questões com revisão pendente)
-            from datetime import date
-            qs = qs.filter(questionreview__proxima_revisao__lte=date.today())
+            qs = qs.filter(reviews__proxima_revisao__lte=timezone.localdate())
+
         elif estrategia == 'baixo_desempenho':
-            # Tópicos com baixo desempenho (< 50% de acerto)
             qs = qs.annotate(
-                total=Count('questionattempt'),
-                acertos=Count('questionattempt', filter=Q(questionattempt__correta=True)),
+                total=Count('attempts'),
+                acertos=Count('attempts', filter=Q(attempts__correta=True)),
                 taxa=Case(
                     When(total=0, then=Value(0.0)),
                     default=ExpressionWrapper(
                         F('acertos') * 100.0 / F('total'),
-                        output_field=FloatField()
-                    )
-                )
+                        output_field=FloatField(),
+                    ),
+                ),
             ).filter(taxa__lt=50.0)
-        else:  # aleatório
+
+        else:  # aleatorio
             qs = qs.order_by('?')
 
-        # Limitar quantidade
         questoes = list(qs[:quantidade])
 
         if not questoes:
-            messages.warning(request, 'Nenhuma questão encontrada com os critérios selecionados.')
+            messages.warning(
+                request,
+                'Nenhuma questão encontrada com os critérios selecionados.',
+            )
             return redirect('questions:treino_inteligente')
 
-        # Salvar IDs na sessão
         request.session['treino_questoes'] = [q.id for q in questoes]
         request.session['treino_indice'] = 0
         return redirect('questions:treino_sessao')
 
-    # GET: exibir configuração
+    # ---- GET: formulário de configuração ----
     subjects = Subject.objects.filter(contest__user=request.user)
     topics = Topic.objects.filter(subject__contest__user=request.user)
     difficulty_choices = Question.DIFFICULTY_CHOICES
@@ -488,18 +342,23 @@ def treino_inteligente(request):
         ('aleatorio', 'Aleatório'),
     ]
 
-    context = {
+    return render(request, 'questions/treino_config.html', {
         'subjects': subjects,
         'topics': topics,
         'difficulty_choices': difficulty_choices,
         'estrategias': estrategias,
-    }
-    return render(request, 'questions/treino_config.html', context)
+    })
 
 
 @login_required
 def treino_sessao(request):
-    # Se não houver questões na sessão, voltar à configuração
+    """
+    Renderiza a questão atual do treino.
+
+    - GET simples: mostra a questão atual.
+    - GET ?next=1: avança o índice (usado pelo botão "Próxima questão"
+      após o feedback). Se chegar ao fim, encerra o treino.
+    """
     if 'treino_questoes' not in request.session:
         messages.warning(request, 'Nenhum treino em andamento.')
         return redirect('questions:treino_inteligente')
@@ -507,7 +366,11 @@ def treino_sessao(request):
     questoes_ids = request.session.get('treino_questoes', [])
     indice = request.session.get('treino_indice', 0)
 
-    # Se já terminou todas as questões
+    # Avanço explícito (vindo do "Próxima questão")
+    if request.GET.get('next') == '1':
+        indice += 1
+        request.session['treino_indice'] = indice
+
     if indice >= len(questoes_ids):
         messages.success(request, 'Treino concluído! 🎉')
         request.session.pop('treino_questoes', None)
@@ -516,104 +379,481 @@ def treino_sessao(request):
 
     question = get_object_or_404(Question, pk=questoes_ids[indice], user=request.user)
 
-    resultado = None
-    acertou = False
-    resposta_usuario = None
-
-    # Se o usuário enviou uma resposta (POST)
-    if request.method == 'POST':
-        if 'proximo' in request.POST:
-            # Avançar para a próxima
-            request.session['treino_indice'] = indice + 1
-            return redirect('questions:treino_sessao')
-
-        # Resposta da questão atual
-        resposta_usuario = request.POST.get('resposta')
-        if resposta_usuario:
-            acertou = (resposta_usuario == question.alternativa_correta)
-            # Registrar tentativa
-            QuestionAttempt.objects.create(
-                user=request.user,
-                question=question,
-                resposta_escolhida=resposta_usuario,
-                correta=acertou,
-                tempo_gasto=request.POST.get('tempo', 0),
-                modo='treino',
-                contest=question.contest,
-                topic=question.topic,
-            )
-            if not acertou:
-                # Registrar erro no caderno de erros
-                ErrorLog.objects.create(
-                    user=request.user,
-                    question=question,
-                    motivo=request.POST.get('motivo', 'desconhecido'),
-                )
-            resultado = True
-
-    # Se houve resposta, passar resultado para o template
-    context = {
+    total = len(questoes_ids)
+    return render(request, 'questions/treino_sessao.html', {
         'question': question,
         'indice': indice + 1,
-        'total': len(questoes_ids),
-        'progresso': int((indice) / len(questoes_ids) * 100) if len(questoes_ids) > 0 else 0,
-        'resultado': resultado,
-        'acertou': acertou,
-        'resposta_usuario': resposta_usuario,
-    }
-    return render(request, 'questions/treino_sessao.html', context)
+        'total': total,
+        'progresso': int(indice / total * 100) if total else 0,
+    })
 
-# ============================
-# TREINO INTELIGENTE - RESPONDER
-# ============================
 
 @login_required
 def treino_responder(request):
-    if request.method == 'POST':
-        question_id = request.POST.get('question_id')
-        resposta = request.POST.get('resposta')
-        tempo = int(request.POST.get('tempo', 0))
-        question = get_object_or_404(Question, id=question_id, user=request.user)
+    """
+    Recebe a resposta, registra tentativa e re-renderiza a MESMA questão
+    com o feedback (acertou/errou). O avanço acontece em `treino_sessao`
+    quando o usuário clica em "Próxima questão" (?next=1).
+    """
+    if request.method != 'POST':
+        return redirect('questions:treino_inteligente')
 
-        acertou = (resposta == question.alternativa_correta)
+    question_id = request.POST.get('question_id')
+    resposta = request.POST.get('resposta')
+    tempo = int(request.POST.get('tempo', 0) or 0)
 
-        # Registrar tentativa
-        QuestionAttempt.objects.create(
-            user=request.user,
-            question=question,
-            resposta_escolhida=resposta,
-            correta=acertou,
-            tempo_gasto=tempo,
-            modo='treino',
-            contest=question.contest,
-            topic=question.topic,
-        )
-
-        if not acertou:
-            ErrorLog.objects.create(
-                user=request.user,
-                question=question,
-                motivo='desconhecido',
-            )
-
-        # Armazenar resultado na sessão para exibir na página
-        request.session['ultimo_resultado'] = {
-            'acertou': acertou,
-            'resposta': resposta,
-            'correta': question.alternativa_correta,
-            'explicacao': question.explicacao,
-        }
-
-        # Avançar para a próxima questão ou finalizar
-        questoes_ids = request.session.get('treino_questoes', [])
-        indice = request.session.get('treino_indice', 0)
-        indice += 1
-        request.session['treino_indice'] = indice
-
-        if indice >= len(questoes_ids):
-            messages.success(request, 'Treino concluído!')
-            return redirect('questions:treino_inteligente')
-
+    if not question_id or not resposta:
+        messages.error(request, 'Resposta inválida.')
         return redirect('questions:treino_sessao')
 
-    return redirect('questions:treino_inteligente')
+    question = get_object_or_404(Question, id=question_id, user=request.user)
+    acertou = (resposta == question.alternativa_correta)
+
+    QuestionAttempt.objects.create(
+        user=request.user,
+        question=question,
+        resposta_escolhida=resposta,
+        correta=acertou,
+        tempo_gasto=tempo,
+        modo='treino',
+        contest=question.contest,
+        topic=question.topic,
+    )
+
+    # Caderno: SEMPRE registra (acerto OU erro)
+    _registrar_no_caderno(
+        user=request.user,
+        question=question,
+        acertou=acertou,
+        motivo=request.POST.get('motivo', ''),
+    )
+
+    # Re-renderiza a MESMA questão com o feedback
+    questoes_ids = request.session.get('treino_questoes', [])
+    indice = request.session.get('treino_indice', 0)
+    total = len(questoes_ids)
+    progresso = int(indice / total * 100) if total else 0
+
+    return render(request, 'questions/treino_sessao.html', {
+        'question': question,
+        'indice': indice + 1,
+        'total': total,
+        'progresso': progresso,
+        'resultado': True,
+        'acertou': acertou,
+        'resposta_usuario': resposta,
+    })
+
+# ============================================================
+# SIMULADOS — STUBS
+# ============================================================
+# TODO: implementar. Hoje retornam 501 para não quebrar o menu.
+# Quando implementar, criar templates:
+#   - questions/simulado_list.html
+#   - questions/simulado_form.html
+#   - questions/simulado_sessao.html
+#   - questions/simulado_resultado.html
+
+class SimuladoCreateView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+class SimuladoListView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+@login_required
+def simulado_iniciar(request, pk):
+    return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+@login_required
+def simulado_resolver(request, pk):
+    return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+@login_required
+def simulado_responder(request, pk):
+    return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+@login_required
+def simulado_finalizar(request, pk):
+    return HttpResponse('Simulados ainda não implementados.', status=501)
+
+
+# ============================================================
+# CADERNO DE ERROS
+# ============================================================
+
+@login_required
+def error_log_list(request):
+    """
+    Caderno de revisão. Mostra acertos E erros, com filtro.
+
+    Query string:
+      ?filtro=todos    → padrão, mostra tudo
+      ?filtro=erros    → só acertou=False
+      ?filtro=acertos  → só acertou=True
+    """
+    filtro = request.GET.get('filtro', 'todos')
+
+    base = ErrorLog.objects.filter(user=request.user).select_related(
+        'question', 'question__topic', 'question__topic__subject'
+    )
+
+    if filtro == 'erros':
+        entries = base.filter(acertou=False)
+    elif filtro == 'acertos':
+        entries = base.filter(acertou=True)
+    else:
+        entries = base
+
+    total_erros = base.filter(acertou=False).count()
+    total_acertos = base.filter(acertou=True).count()
+
+    return render(request, 'questions/error_log.html', {
+        'entries': entries,
+        'filtro': filtro,
+        'total_erros': total_erros,
+        'total_acertos': total_acertos,
+        'total_geral': total_erros + total_acertos,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def error_log_delete(request, pk):
+    """Remove uma entrada do caderno (usuário decide o que apagar)."""
+    entry = get_object_or_404(ErrorLog, pk=pk, user=request.user)
+    entry.delete()
+    messages.success(request, 'Entrada removida do caderno.')
+    return redirect('questions:error_log')
+
+@login_required
+def error_log_detail(request, pk):
+    error = get_object_or_404(ErrorLog, pk=pk, user=request.user)
+    return render(request, 'questions/error_log_detail.html', {'error': error})
+
+
+# ============================================================
+# ANÁLISE DE DESEMPENHO — STUB
+# ============================================================
+
+@login_required
+def performance(request):
+    """
+    Página de performance/relatórios.
+
+    Query string:
+      ?periodo=7|30|90|all  (default: 30)
+
+    Métricas:
+      - KPIs gerais (tentativas, acurácia, tempo)
+      - Acurácia por matéria (bar chart)
+      - Acurácia por banca (doughnut top 5)
+      - Top 10 tópicos mais fracos (bar horizontal)
+      - Evolução diária (line chart, últimos N dias)
+    """
+    from datetime import timedelta
+
+    # ---- Período ----
+    periodo_map = {'7': 7, '30': 30, '90': 90, 'all': None}
+    periodo_key = request.GET.get('periodo', '30')
+    dias = periodo_map.get(periodo_key, 30)
+
+    hoje = timezone.localdate()
+    if dias:
+        data_inicio = hoje - timedelta(days=dias - 1)
+    else:
+        data_inicio = None
+
+    # ---- Base de tentativas ----
+    attempts = QuestionAttempt.objects.filter(user=request.user)
+    if data_inicio:
+        attempts = attempts.filter(data__date__gte=data_inicio)
+
+    # ---- KPIs gerais ----
+    total_attempts = attempts.count()
+    total_corretas = attempts.filter(correta=True).count()
+    acuracia_geral = round((total_corretas / total_attempts) * 100, 1) if total_attempts else 0
+    tempo_total = attempts.aggregate(t=Sum('tempo_gasto'))['t'] or 0
+    tempo_horas = round(tempo_total / 3600, 1)
+
+    total_questoes = Question.objects.filter(user=request.user).count()
+    topicos_cobertos = (
+        attempts.exclude(topic=None).values('topic').distinct().count()
+    )
+
+    # ---- Por matéria ----
+    por_materia = (
+        attempts
+        .filter(topic__isnull=False)
+        .values('topic__subject__name')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('-total')
+    )
+    materias_labels, materias_data = [], []
+    for row in por_materia[:10]:
+        nome = row['topic__subject__name'] or '—'
+        total = row['total']
+        acertos = row['corretas']
+        pct = round((acertos / total) * 100, 1) if total else 0
+        materias_labels.append(nome)
+        materias_data.append(pct)
+
+    # ---- Por banca ----
+    por_banca = (
+        attempts
+        .filter(question__banca__gt='')
+        .values('question__banca')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('-total')
+    )
+    bancas_labels, bancas_data = [], []
+    for row in por_banca[:5]:
+        bancas_labels.append(row['question__banca'])
+        bancas_data.append(row['corretas'])
+
+    # ---- Top 10 tópicos mais fracos ----
+    topicos_fracos = (
+        attempts
+        .filter(topic__isnull=False)
+        .values('topic__id', 'topic__name', 'topic__subject__name')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .filter(total__gte=2)
+    )
+    topicos_fracos = sorted(
+        [
+            {
+                'id': t['topic__id'],
+                'name': t['topic__name'],
+                'subject': t['topic__subject__name'],
+                'total': t['total'],
+                'acertos': t['corretas'],
+                'pct': round((t['corretas'] / t['total']) * 100, 1) if t['total'] else 0,
+            }
+            for t in topicos_fracos
+        ],
+        key=lambda x: x['pct'],
+    )[:10]
+
+    # ---- Evolução diária ----
+    # Se 'all' ou sem data, usa últimos 30 dias por padrão para o gráfico
+    evol_dias = dias or 30
+    evol_inicio = hoje - timedelta(days=evol_dias - 1)
+    evol_qs = (
+        attempts
+        .filter(data__date__gte=evol_inicio)
+        .extra(select={'dia': 'date(data)'})
+        .values('dia')
+        .annotate(
+            total=Count('id'),
+            corretas=Count('id', filter=Q(correta=True)),
+        )
+        .order_by('dia')
+    )
+    evol_map = {
+        str(r['dia']): {
+            'total': r['total'],
+            'acertos': r['corretas'],
+            'acuracia': round((r['corretas'] / r['total']) * 100, 1) if r['total'] else 0,
+        }
+        for r in evol_qs
+    }
+    # Preenche dias faltantes com 0
+    evol_labels, evol_acuracia, evol_total = [], [], []
+    for i in range(evol_dias):
+        d = evol_inicio + timedelta(days=i)
+        key = d.isoformat()
+        info = evol_map.get(key, {'total': 0, 'acertos': 0, 'acuracia': 0})
+        evol_labels.append(d.strftime('%d/%m'))
+        evol_acuracia.append(info['acuracia'])
+        evol_total.append(info['total'])
+
+    context = {
+        'periodo': periodo_key,
+        'periodo_label': {
+            '7': 'Últimos 7 dias',
+            '30': 'Últimos 30 dias',
+            '90': 'Últimos 90 dias',
+            'all': 'Todo o período',
+        }.get(periodo_key, 'Últimos 30 dias'),
+
+        # KPIs
+        'total_attempts': total_attempts,
+        'total_corretas': total_corretas,
+        'acuracia_geral': acuracia_geral,
+        'tempo_horas': tempo_horas,
+        'total_questoes': total_questoes,
+        'topicos_cobertos': topicos_cobertos,
+
+        # Charts (JSON serializável)
+        'materias_labels': json.dumps(materias_labels),
+        'materias_data': json.dumps(materias_data),
+        'bancas_labels': json.dumps(bancas_labels),
+        'bancas_data': json.dumps(bancas_data),
+        'evol_labels': json.dumps(evol_labels),
+        'evol_acuracia': json.dumps(evol_acuracia),
+        'evol_total': json.dumps(evol_total),
+
+        # Tabela de tópicos fracos
+        'topicos_fracos': topicos_fracos,
+
+        # Doughnut acertos vs erros
+        'erros_count': total_attempts - total_corretas,
+    }
+    return render(request, 'questions/performance.html', context)
+
+@login_required
+def import_questions(request):
+    """
+    Importação de questões via CSV.
+
+    Fluxo:
+      GET  → mostra formulário (upload + select de tópico fallback)
+      POST → parseia o CSV, valida cada linha, mostra relatório.
+             Se não houver nenhum erro, grava tudo e redireciona.
+
+    Cabeçalho esperado:
+      enunciado,alternativa_a,alternativa_b,alternativa_c,alternativa_d,
+      correta,explicacao,banca,ano,dificuldade,topic_id
+    """
+    from .importers import parse_csv, save_valid_rows, CSVImportError
+
+    contests = Contest.objects.filter(user=request.user).order_by('name')
+
+    context = {
+        'contests': contests,
+        'result':   None,
+        'error':    None,
+        'csv_exemplo': (
+            'enunciado,alternativa_a,alternativa_b,alternativa_c,alternativa_d,'
+            'correta,explicacao,banca,ano,dificuldade,topic_id'
+        ),
+    }
+
+    if request.method != 'POST':
+        return render(request, 'questions/import.html', context)
+
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        context['error'] = 'Nenhum arquivo enviado.'
+        return render(request, 'questions/import.html', context)
+
+    # Tópico fallback (opcional)
+    fallback_topic = None
+    topic_id = request.POST.get('fallback_topic')
+    if topic_id:
+        from apps.subjects.models import Topic
+        fallback_topic = Topic.objects.filter(
+            id=topic_id, subject__contest__user=request.user
+        ).first()
+
+    # Parse
+    try:
+        result = parse_csv(arquivo, request.user, fallback_topic=fallback_topic)
+    except CSVImportError as exc:
+        context['error'] = str(exc)
+        return render(request, 'questions/import.html', context)
+
+    # Se tudo válido → grava e redireciona
+    if result.invalid == 0 and result.valid > 0:
+        from django.db import transaction
+        with transaction.atomic():
+            criadas = save_valid_rows(result.rows, request.user)
+        messages.success(request, f'{criadas} questão(ões) importada(s) com sucesso!')
+        return redirect('questions:bank')
+
+    # Senão → mostra relatório com erros
+    context['result'] = result
+    return render(request, 'questions/import.html', context)
+
+@login_required
+def ia_gerar_page(request):
+    """Página de geração de questões com IA."""
+    contests = Contest.objects.filter(user=request.user).order_by('name')
+    return render(request, 'questions/ia_gerar.html', {
+        'contests': contests,
+        'difficulty_choices': Question.DIFFICULTY_CHOICES,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def ia_gerar_api(request):
+    """
+    POST recebe:
+      topic_id      (int, obrigatório)
+      quantidade    (int, 1-10, default 5)
+      dificuldade   (int, 1-5, default 3)
+      fonte         ('auto' | 'notas', default 'auto')
+    """
+    from .services import gerar_e_salvar_questoes_ia
+    from apps.subjects.models import Topic
+
+    topic_id = request.POST.get('topic_id')
+    if not topic_id:
+        return JsonResponse({'success': False, 'error': 'Tópico não informado.'}, status=400)
+
+    try:
+        quantidade = int(request.POST.get('quantidade', 5))
+        dificuldade = int(request.POST.get('dificuldade', 3))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Valores numéricos inválidos.'}, status=400)
+
+    fonte = request.POST.get('fonte', 'auto')
+    banca = (request.POST.get('banca') or '').strip() or None
+
+    try:
+        topic = Topic.objects.select_related('subject', 'subject__contest').get(
+            id=topic_id, subject__contest__user=request.user
+        )
+    except Topic.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Tópico não encontrado.'}, status=404)
+
+    try:
+        resultado = gerar_e_salvar_questoes_ia(
+            user=request.user,
+            topic=topic,
+            quantidade=quantidade,
+            dificuldade=dificuldade,
+            fonte=fonte,
+            banca=banca,
+        )
+    except RuntimeError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    except Exception as exc:
+        logger.exception('Erro inesperado ao gerar questões com IA')
+        return JsonResponse(
+            {'success': False, 'error': f'Erro inesperado: {exc}'},
+            status=500,
+        )
+
+    criadas = resultado['criadas']
+    if not criadas:
+        return JsonResponse({
+            'success': False,
+            'error': 'A IA respondeu, mas nenhuma questão passou na validação.',
+            'descartadas': resultado['descartadas'],
+        }, status=422)
+
+    return JsonResponse({
+        'success': True,
+        'criadas': len(criadas),
+        'descartadas': resultado['descartadas'],
+        'question_ids': [q.id for q in criadas],
+        'fonte_usada': resultado['fonte_usada'],
+        'banca': banca or 'genérica',
+    })

@@ -5,11 +5,21 @@
     <div class="card">
       <div class="card-header">Confirmar exclusão</div>
       <div class="card-body">
-        <p>Tem certeza que deseja excluir a nota "{{ object.title }}"?</p>
+        <p>Tem certeza que deseja excluir a nota <strong>{{ object.title }}</strong>?</p>
+        {% if object.folder %}
+          <p class="text-muted small">
+            Ela estava na pasta <strong>{{ object.folder.name }}</strong>.
+            Após excluir, você voltará para lá.
+          </p>
+        {% endif %}
         <form method="post">
           {% csrf_token %}
+          {% if next_url %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+          {% endif %}
           <button type="submit" class="btn btn-danger">Sim, excluir</button>
-          <a href="{% url 'notes:list' %}" class="btn btn-secondary">Cancelar</a>
+          <a href="{% if next_url %}{{ next_url }}{% elif object.folder %}{% url 'notes:folder_detail' object.folder.pk %}{% else %}{% url 'notes:folder_list' %}{% endif %}"
+             class="btn btn-secondary">Cancelar</a>
         </form>
       </div>
     </div>

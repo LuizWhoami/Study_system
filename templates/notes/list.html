@@ -78,7 +78,7 @@
             <a href="{% url 'notes:update' note.pk %}" class="btn btn-sm btn-outline-secondary">
               <i class="bi bi-pencil"></i>
             </a>
-            <a href="{% url 'notes:delete' note.pk %}" class="btn btn-sm btn-outline-danger">
+            <a href="{% url 'notes:delete' note.pk %}?next={% url 'notes:list' %}" class="btn btn-sm btn-outline-danger">
               <i class="bi bi-trash"></i>
             </a>
           </div>
