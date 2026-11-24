@@ -2,71 +2,329 @@
 {% load static %}
 {% block title %}Visão Geral dos Estudos{% endblock %}
 
+{% block extra_css %}
+<style>
+  .ov-page { max-width: 1100px; margin: 0 auto; }
+
+  .ov-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .ov-title {
+    font-size: 1.75rem; font-weight: 700; color: #F8FAFF;
+    letter-spacing: -0.02em; margin: 0 0 .25rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .ov-title i { color: #8B7FFF; }
+  .ov-subtitle { color: rgba(248,250,255,.55); font-size: .9rem; margin: 0; }
+
+  .ov-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .ov-kpi {
+    background: rgba(23,23,37,.6);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 16px;
+    padding: 1.25rem 1rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .ov-kpi:hover { border-color: rgba(108,99,255,.3); transform: translateY(-2px); }
+  .ov-kpi__icon {
+    width: 36px; height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: rgba(108,99,255,.12); color: #A78BFA;
+    font-size: 1.05rem; margin-bottom: .75rem;
+  }
+  .ov-kpi__icon--success { background: rgba(16,185,129,.12); color: #34D399; }
+  .ov-kpi__icon--primary { background: rgba(108,99,255,.12); color: #A78BFA; }
+  .ov-kpi__icon--warning { background: rgba(245,158,11,.12); color: #FBBF24; }
+  .ov-kpi__icon--danger  { background: rgba(239,68,68,.12);  color: #F87171; }
+  .ov-kpi__value { font-size: 1.75rem; font-weight: 700; color: #F8FAFF; line-height: 1.1; margin-bottom: .15rem; }
+  .ov-kpi__label { font-size: .8rem; color: rgba(248,250,255,.55); }
+  .ov-kpi__hint  { font-size: .72rem; color: rgba(248,250,255,.35); margin-top: .25rem; }
+
+  .ov-list { display: flex; flex-direction: column; gap: 1rem; }
+  .ov-card {
+    position: relative;
+    background: rgba(23,23,37,.6);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 18px;
+    padding: 1.5rem;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .ov-card::before {
+    content: '';
+    position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 3px; border-radius: 3px;
+    background: #6C63FF;
+  }
+  .ov-card--urgente::before  { background: #EF4444; }
+  .ov-card--atencao::before  { background: #F59E0B; }
+  .ov-card--normal::before   { background: #10B981; }
+  .ov-card--vencida::before  { background: #6B7280; }
+  .ov-card--sem-data::before { background: #4B5563; }
+  .ov-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -12px rgba(0,0,0,.6); }
+
+  .ov-card__header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .ov-card__title-group { flex: 1; min-width: 0; }
+  .ov-card__title { font-size: 1.15rem; font-weight: 700; color: #F8FAFF; margin: 0 0 .4rem; letter-spacing: -0.01em; }
+  .ov-card__meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+
+  .ov-badge {
+    display: inline-flex; align-items: center;
+    padding: .15rem .55rem;
+    font-size: .72rem; font-weight: 500;
+    border-radius: 6px;
+    background: rgba(255,255,255,.06); color: rgba(248,250,255,.75);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .ov-badge--status-studying  { background: rgba(108,99,255,.15); color: #C4B5FD; }
+  .ov-badge--status-review    { background: rgba(245,158,11,.15); color: #FBBF24; }
+  .ov-badge--status-intensive { background: rgba(239,68,68,.15);  color: #FCA5A5; }
+  .ov-badge--status-planning  { background: rgba(148,163,184,.15); color: #CBD5E1; }
+  .ov-badge--status-finished  { background: rgba(16,185,129,.15); color: #6EE7B7; }
+  .ov-badge--status-archived  { background: rgba(107,114,128,.15); color: #9CA3AF; }
+
+  .ov-meta-item { font-size: .8rem; color: rgba(248,250,255,.5); display: inline-flex; align-items: center; gap: .25rem; }
+
+  .ov-urgency {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .35rem .7rem; border-radius: 100px;
+    font-size: .78rem; font-weight: 600; white-space: nowrap;
+  }
+  .ov-urgency--urgente { background: rgba(239,68,68,.12); color: #FCA5A5; border: 1px solid rgba(239,68,68,.3); }
+  .ov-urgency--atencao { background: rgba(245,158,11,.12); color: #FBBF24; border: 1px solid rgba(245,158,11,.3); }
+  .ov-urgency--normal  { background: rgba(16,185,129,.12); color: #6EE7B7; border: 1px solid rgba(16,185,129,.3); }
+  .ov-urgency--vencida { background: rgba(107,114,128,.12); color: #9CA3AF; border: 1px solid rgba(107,114,128,.3); }
+
+  .ov-dates { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .82rem; color: rgba(248,250,255,.55); margin-bottom: 1rem; }
+  .ov-dates i { margin-right: .25rem; }
+
+  .ov-progress { margin-bottom: 1rem; }
+  .ov-progress__bar {
+    position: relative; height: 12px;
+    background: rgba(255,255,255,.05);
+    border-radius: 100px;
+  }
+  .ov-progress__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4F46E5 0%, #8B7FFF 100%);
+    border-radius: 100px;
+    transition: width .5s ease;
+  }
+  .ov-progress__walker {
+    position: absolute; top: -16px;
+    transform: translateX(-50%);
+    font-size: 1.4rem; color: #FFD700;
+    filter: drop-shadow(0 2px 6px rgba(255,215,0,.5));
+    transition: left .6s ease;
+    line-height: 1;
+  }
+  .ov-progress__labels { display: flex; justify-content: space-between; align-items: baseline; margin-top: .6rem; }
+  .ov-progress__pct { font-size: .95rem; font-weight: 700; color: #C4B5FD; }
+  .ov-progress__detail { font-size: .78rem; color: rgba(248,250,255,.5); }
+
+  .ov-card__bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; flex-wrap: wrap; padding-top: .75rem;
+    border-top: 1px solid rgba(255,255,255,.05);
+  }
+  .ov-focus { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; flex: 1; }
+  .ov-focus__label { font-size: .78rem; color: rgba(248,250,255,.5); display: inline-flex; align-items: center; gap: .25rem; }
+  .ov-focus__chip {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .25rem .6rem;
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+    border-radius: 100px; font-size: .76rem; color: #FCA5A5;
+  }
+  .ov-focus__count {
+    background: rgba(239,68,68,.25); color: #FCA5A5;
+    font-size: .7rem; padding: 0 .4rem; border-radius: 100px; font-weight: 600;
+  }
+  .ov-focus__empty { font-size: .82rem; color: #6EE7B7; display: inline-flex; align-items: center; gap: .35rem; }
+
+  .ov-stats { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8rem; color: rgba(248,250,255,.55); }
+  .ov-stats span { display: inline-flex; align-items: center; gap: .25rem; }
+
+  .ov-empty {
+    text-align: center; padding: 4rem 2rem;
+    background: rgba(23,23,37,.6);
+    border: 1px dashed rgba(108,99,255,.25);
+    border-radius: 20px;
+  }
+  .ov-empty__icon {
+    width: 80px; height: 80px; margin: 0 auto 1.5rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: rgba(108,99,255,.1); color: #8B7FFF;
+    font-size: 2.2rem;
+  }
+  .ov-empty h2 { font-size: 1.4rem; font-weight: 700; color: #F8FAFF; margin: 0 0 .5rem; }
+  .ov-empty p { color: rgba(248,250,255,.55); max-width: 400px; margin: 0 auto 1.5rem; }
+
+  @media (max-width: 768px) {
+    .ov-card { padding: 1.25rem 1rem; }
+    .ov-card__bottom { flex-direction: column; align-items: stretch; }
+    .ov-card__bottom .btn { width: 100%; }
+    .ov-title { font-size: 1.4rem; }
+    .ov-kpi__value { font-size: 1.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ov-card, .ov-kpi, .ov-progress__fill, .ov-progress__walker { transition: none; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-diagram-3 me-2"></i>Visão Geral dos Estudos</h2>
-  <a href="{% url 'contests:create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-1"></i> Novo Estudo
-  </a>
-</div>
+<div class="ov-page">
 
-<div class="row g-4">
-  {% for item in estudos_data %}
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <div class="row align-items-center">
-            <!-- Informações do estudo -->
-            <div class="col-md-3">
-              <h4 class="card-title">{{ item.estudo.name }}</h4>
-              <p class="card-text text-muted small">
-                <i class="bi bi-calendar-plus me-1"></i> Início: {{ item.data_inicio|date:"d/m/Y" }}<br>
-                <i class="bi bi-calendar-event me-1"></i> Prova: {{ item.data_prova|date:"d/m/Y"|default:"Não definida" }}
-              </p>
-              <span class="badge bg-{% if item.estudo.status == 'studying' %}primary{% elif item.estudo.status == 'review' %}warning{% elif item.estudo.status == 'finished' %}success{% else %}secondary{% endif %}">
-                {{ item.estudo.get_status_display }}
-              </span>
-              <p class="mt-2 mb-0"><small>Matérias: {{ item.total_materias }}</small></p>
-            </div>
+  <div class="ov-header">
+    <div>
+      <h1 class="ov-title"><i class="bi bi-diagram-3"></i> Visão Geral</h1>
+      <p class="ov-subtitle">Como estão seus estudos agora</p>
+    </div>
+    <a href="{% url 'contests:create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1"></i> Novo Estudo
+    </a>
+  </div>
 
-            <!-- Barra de progresso com boneco -->
-            <div class="col-md-6">
-              <div class="position-relative" style="height: 40px; background: #2d2d44; border-radius: 20px; overflow: visible;">
-                <div class="progress-bar" role="progressbar" style="width: {{ item.progresso }}%; height: 100%; background: linear-gradient(90deg, #4f46e5, #7c8cff); border-radius: 20px;"></div>
-                <!-- Boneco (posicionado conforme progresso) -->
-                <div class="position-absolute top-0 start-0" style="transform: translateX({{ item.posicao_boneco }}%); transition: transform 0.5s ease; height: 100%; display: flex; align-items: center; padding-left: 10px;">
-                  <i class="bi bi-person-walking" style="font-size: 2.2rem; color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5);"></i>
-                </div>
+  {% if estudos_data %}
+
+    <div class="ov-kpis">
+      <div class="ov-kpi">
+        <div class="ov-kpi__icon"><i class="bi bi-collection"></i></div>
+        <div class="ov-kpi__value">{{ kpis.total_estudos_ativos }}</div>
+        <div class="ov-kpi__label">Estudos ativos</div>
+        {% if kpis.total_estudos != kpis.total_estudos_ativos %}
+          <div class="ov-kpi__hint">{{ kpis.total_estudos }} no total</div>
+        {% endif %}
+      </div>
+      <div class="ov-kpi">
+        <div class="ov-kpi__icon ov-kpi__icon--success"><i class="bi bi-patch-check"></i></div>
+        <div class="ov-kpi__value">{{ kpis.total_topicos_dominados }}</div>
+        <div class="ov-kpi__label">Tópicos dominados</div>
+      </div>
+      <div class="ov-kpi">
+        <div class="ov-kpi__icon ov-kpi__icon--primary"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="ov-kpi__value">{{ kpis.progresso_medio }}%</div>
+        <div class="ov-kpi__label">Progresso médio</div>
+      </div>
+      <div class="ov-kpi">
+        {% if kpis.proxima_prova_dias is not None %}
+          <div class="ov-kpi__icon {% if kpis.proxima_prova_dias <= 30 %}ov-kpi__icon--danger{% elif kpis.proxima_prova_dias <= 90 %}ov-kpi__icon--warning{% else %}ov-kpi__icon--primary{% endif %}">
+            <i class="bi bi-calendar-event"></i>
+          </div>
+          <div class="ov-kpi__value">
+            {% if kpis.proxima_prova_dias == 0 %}Hoje{% else %}{{ kpis.proxima_prova_dias }}{% endif %}
+          </div>
+          <div class="ov-kpi__label">
+            {% if kpis.proxima_prova_dias == 0 %}Prova hoje!{% elif kpis.proxima_prova_dias == 1 %}dia até a prova{% else %}dias até a prova{% endif %}
+          </div>
+        {% else %}
+          <div class="ov-kpi__icon"><i class="bi bi-calendar-x"></i></div>
+          <div class="ov-kpi__value">—</div>
+          <div class="ov-kpi__label">Sem prova marcada</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="ov-list">
+      {% for item in estudos_data %}
+        <article class="ov-card ov-card--{{ item.urgencia }}">
+          <div class="ov-card__header">
+            <div class="ov-card__title-group">
+              <h2 class="ov-card__title">{{ item.estudo.name }}</h2>
+              <div class="ov-card__meta">
+                <span class="ov-badge ov-badge--status-{{ item.estudo.status }}">
+                  {{ item.estudo.get_status_display }}
+                </span>
+                {% if item.estudo.organization %}
+                  <span class="ov-meta-item"><i class="bi bi-building"></i> {{ item.estudo.organization }}</span>
+                {% endif %}
               </div>
-              <div class="d-flex justify-content-between mt-1">
-                <small class="text-muted">Início</small>
-                <small class="text-muted">{{ item.progresso }}% concluído</small>
-                <small class="text-muted">Prova</small>
-              </div>
             </div>
-
-            <!-- Resumo rápido -->
-            <div class="col-md-3 text-end">
-              <p class="mb-1"><i class="bi bi-book me-1"></i> Tópicos: {{ item.total_topics }}</p>
-              <p class="mb-1"><i class="bi bi-check-circle me-1 text-success"></i> Concluídos: {{ item.concluidos }}</p>
-              {% if item.dias_totais %}
-                <p class="mb-0"><i class="bi bi-hourglass-split me-1"></i> {{ item.dias_passados }} / {{ item.dias_totais }} dias</p>
+            {% if item.dias_restantes is not None %}
+              {% if item.dias_restantes < 0 %}
+                <span class="ov-urgency ov-urgency--vencida"><i class="bi bi-exclamation-triangle"></i> Prova passou</span>
+              {% elif item.dias_restantes == 0 %}
+                <span class="ov-urgency ov-urgency--urgente"><i class="bi bi-fire"></i> Prova hoje</span>
+              {% elif item.dias_restantes <= 30 %}
+                <span class="ov-urgency ov-urgency--urgente"><i class="bi bi-fire"></i> Faltam {{ item.dias_restantes }} dias</span>
+              {% elif item.dias_restantes <= 90 %}
+                <span class="ov-urgency ov-urgency--atencao"><i class="bi bi-clock-history"></i> Faltam {{ item.dias_restantes }} dias</span>
+              {% else %}
+                <span class="ov-urgency ov-urgency--normal"><i class="bi bi-calendar-check"></i> {{ item.dias_restantes }} dias</span>
               {% endif %}
-              <a href="{% url 'contests:detail' item.estudo.pk %}" class="btn btn-outline-primary btn-sm mt-2">
-                <i class="bi bi-eye"></i> Ver detalhes
-              </a>
+            {% endif %}
+          </div>
+
+          <div class="ov-dates">
+            <span><i class="bi bi-play-circle"></i> Início {{ item.data_inicio|date:"d/m/Y" }}</span>
+            {% if item.data_prova %}
+              <span><i class="bi bi-flag"></i> Prova {{ item.data_prova|date:"d/m/Y" }}</span>
+            {% else %}
+              <span class="text-muted"><i class="bi bi-flag"></i> Prova não definida</span>
+            {% endif %}
+          </div>
+
+          <div class="ov-progress">
+            <div class="ov-progress__bar">
+              <div class="ov-progress__fill" style="width: {{ item.progresso }}%;"></div>
+              {% if item.data_prova %}
+                <div class="ov-progress__walker" style="left: {{ item.posicao_boneco }}%;">
+                  <i class="bi bi-person-walking"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="ov-progress__labels">
+              <span class="ov-progress__pct">{{ item.progresso }}%</span>
+              <span class="ov-progress__detail">{{ item.concluidos }} de {{ item.total_topics }} tópicos</span>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div class="ov-card__bottom">
+            <div class="ov-focus">
+              {% if item.materias_foco %}
+                <span class="ov-focus__label"><i class="bi bi-bullseye"></i> Foco agora:</span>
+                {% for mf in item.materias_foco %}
+                  <span class="ov-focus__chip" title="{{ mf.pendentes }} de {{ mf.total }} pendentes">
+                    {{ mf.nome }} <span class="ov-focus__count">{{ mf.pendentes }}</span>
+                  </span>
+                {% endfor %}
+              {% else %}
+                <span class="ov-focus__empty"><i class="bi bi-check2-all"></i> Tudo em dia</span>
+              {% endif %}
+            </div>
+
+            <div class="ov-stats">
+              <span><i class="bi bi-journal-bookmark"></i> {{ item.total_materias }} matérias</span>
+              <span><i class="bi bi-check2-circle text-success"></i> {{ item.concluidos }} concluídos</span>
+            </div>
+
+            <a href="{% url 'contests:detail' item.estudo.pk %}" class="btn btn-sm btn-outline-primary">
+              Ver detalhes <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+        </article>
+      {% endfor %}
     </div>
-  {% empty %}
-    <div class="col-12">
-      <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i> Nenhum estudo cadastrado. 
-        <a href="{% url 'contests:create' %}" class="alert-link">Crie seu primeiro estudo</a>
-      </div>
+
+  {% else %}
+    <div class="ov-empty">
+      <div class="ov-empty__icon"><i class="bi bi-compass"></i></div>
+      <h2>Comece sua jornada</h2>
+      <p>Você ainda não tem estudos cadastrados. Crie o primeiro e comece a acompanhar seu progresso.</p>
+      <a href="{% url 'contests:create' %}" class="btn btn-primary btn-lg">
+        <i class="bi bi-plus-circle me-1"></i> Criar meu primeiro estudo
+      </a>
     </div>
-  {% endfor %}
+  {% endif %}
+
 </div>
 {% endblock %}

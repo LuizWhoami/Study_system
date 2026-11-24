@@ -8,4 +8,6 @@ urlpatterns = [
     path('criar/', views.criar_flashcard, name='criar'),
     path('estatisticas/', views.estatisticas_flashcards, name='estatisticas'),
     path('api/notas-por-topico/<int:topic_id>/', views.api_notas_por_topico, name='api_notas'),
+    path('<int:pk>/excluir/', views.excluir_flashcard, name='excluir'),
 ]
+
